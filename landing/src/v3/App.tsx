@@ -283,7 +283,6 @@ export function App() {
         </a>
         <nav>
           <a href="/">Story</a>
-          <a href="/v2/">Blueprint</a>
           <a href={BUILD_LOG_URL} target="_blank" rel="noreferrer">Build log</a>
         </nav>
         <a className="btn btn-small" href={CONTACT_MAILTO}>Early access</a>
@@ -391,9 +390,8 @@ export function App() {
       </section>
 
       <nav className="version-switch" aria-label="Page versions">
-        <a href="/">01</a>
-        <a href="/v2/">02</a>
-        <span className="vs-active">03</span>
+        <a href="/">01 Noir</a>
+        <span className="vs-active">02 Explorer</span>
       </nav>
     </div>
   );

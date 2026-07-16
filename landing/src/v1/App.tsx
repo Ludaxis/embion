@@ -352,8 +352,7 @@ export function App() {
 
       <nav className="version-switch" aria-label="Page versions">
         <span className="vs-current">01 Noir</span>
-        <a className="vs-other" href="/v2/">02</a>
-        <a className="vs-other" href="/v3/">03</a>
+        <a className="vs-other" href="/v3/">02 Explorer</a>
       </nav>
     </div>
   );

@@ -1,14 +1,15 @@
 # EMBION EMB-01 — Landing Pages
 
-Two production landing pages for the EMB-01 multimodal perception module, sharing one
+Two production landing pages (Noir + Explorer) for the EMB-01 multimodal perception module, sharing one
 optimized 3D model and one copy source.
 
 | Route | Version | Art direction |
 |---|---|---|
-| `/` | **01 · Noir** | Dark cinematic, Apple-style scroll storytelling. Scroll-scrubbed camera flight through 7 sensor chapters, per-chapter accent effects (LiDAR sweep, mic pulse rings, ToF depth grid), fusion turntable finale. |
-| `/v2/` | **02 · Blueprint** | Light engineering/drafting aesthetic. Scroll-driven exploded view with ghosted parts, dashed leader lines, spec-table steps, drag-to-rotate hero. |
-| `/v3/` | **03 · Explorer** | Apple-style interactive annotated diagram. Every component labeled with hairline leader lines; hover highlights, click flies the camera to the part and opens a glass description card (single viewport, no scroll). |
+| `/` | **01 · Noir** | Dark cinematic, Apple-style scroll storytelling. Scroll-scrubbed camera flight through 7 sensor chapters with part extraction, per-chapter accent effects (LiDAR sweep, mic pulse rings, ToF depth grid), fusion turntable finale. |
+| `/v3/` | **02 · Explorer** | Dark interactive annotated diagram. Every component labeled with hairline leader lines; hover highlights, click extracts the part from the assembly while the camera flies to it and a glass description card opens (single viewport, no scroll). |
 | `/render/` | Render rig | Internal tool for high-res product stills (see below). |
+
+(The former 02 "Blueprint" light exploded-view version was removed; `/v2/` redirects to `/v3/`.)
 
 ## Commands
 
