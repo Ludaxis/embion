@@ -230,7 +230,7 @@ export function App() {
           motion.extractName && motion.extractName !== part.anchor && motion.extract > 0.01;
         const tl = gsap.timeline();
         if (switching) {
-          tl.to(motion, { extract: 0, duration: reduced ? 0 : 0.35, ease: 'power2.in' });
+          tl.to(motion, { extract: 0, duration: reduced ? 0 : 0.5, ease: 'power2.inOut' });
           tl.call(() => { motion.extractName = part.anchor; });
         } else {
           motion.extractName = part.anchor;
@@ -243,7 +243,7 @@ export function App() {
         flyTo(extractedPose(part));
       } else {
         motion.focus = '';
-        gsap.to(motion, { extract: 0, duration: reduced ? 0 : 0.75, ease: 'power3.inOut' });
+        gsap.to(motion, { extract: 0, duration: reduced ? 0 : 0.9, ease: 'power3.inOut' });
         flyTo(OVERVIEW);
       }
     },

@@ -158,11 +158,19 @@ export function App() {
               section.classList.add('active');
               gsap.killTweensOf(motion, 'extract');
               if (anchor !== 'chassis-upper') {
-                // the featured part slides out of the assembly for its chapter
-                motion.extractName = anchor;
-                gsap.to(motion, { extract: 0.55, duration: 1.1, ease: 'power3.out' });
+                // the featured part slides out for its chapter; if another
+                // part is still out, seat it smoothly FIRST (never teleport)
+                const swap = motion.extractName !== anchor && motion.extract > 0.01;
+                const seq = gsap.timeline();
+                if (swap) {
+                  seq.to(motion, { extract: 0, duration: 0.45, ease: 'power2.inOut' });
+                  seq.call(() => { motion.extractName = anchor; });
+                } else {
+                  motion.extractName = anchor;
+                }
+                seq.to(motion, { extract: 0.55, duration: 1.1, ease: 'power3.out' });
               } else {
-                gsap.to(motion, { extract: 0, duration: 0.7, ease: 'power3.inOut' });
+                gsap.to(motion, { extract: 0, duration: 0.8, ease: 'power3.inOut' });
               }
             } else {
               section.classList.remove('active');
