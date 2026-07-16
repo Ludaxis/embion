@@ -1,13 +1,15 @@
-/* ============ EMBION V3 — Explorer (Apple-style interactive diagram) ============ */
+/* ============ EMBION V3 — Explorer (dark interactive diagram) ============ */
 
 :root {
-  --bg: #fbfbfd;
-  --fg: #1d1d1f;
-  --fg-muted: #6e6e73;
-  --fg-faint: #a1a1a6;
+  --bg: #0a0a0b;
+  --fg: #fafafa;
+  --fg-muted: rgba(250, 250, 250, 0.6);
+  --fg-faint: rgba(250, 250, 250, 0.38);
   --accent: #ff4d00;
-  --hairline: rgba(29, 29, 31, 0.35);
-  --card-shadow: 0 24px 70px rgba(0, 0, 0, 0.16), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  --hairline: rgba(250, 250, 250, 0.32);
+  --glass: rgba(17, 17, 19, 0.72);
+  --glass-stroke: rgba(255, 255, 255, 0.09);
+  --card-shadow: 0 0 0 1px var(--glass-stroke), 0 30px 80px rgba(0, 0, 0, 0.55);
   --sans: 'Geist Sans', system-ui, -apple-system, 'SF Pro Display', sans-serif;
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
 }
@@ -26,7 +28,7 @@ body {
   overflow: hidden; /* single-viewport experience */
 }
 
-::selection { background: var(--fg); color: var(--bg); }
+::selection { background: var(--accent); color: #fff; }
 
 .explorer { position: fixed; inset: 0; }
 .explorer.has-hover .canvas-layer { cursor: pointer; }
@@ -55,9 +57,9 @@ body {
   background: var(--fg); color: var(--bg);
   font-weight: 500; font-size: 13.5px;
   padding: 9px 20px; border-radius: 999px; text-decoration: none;
-  transition: transform 0.25s cubic-bezier(0.33, 0, 0.2, 1), background 0.25s;
+  transition: transform 0.25s cubic-bezier(0.33, 0, 0.2, 1), background 0.25s, color 0.25s;
 }
-.btn:hover { transform: translateY(-1px); background: #000; }
+.btn:hover { transform: translateY(-1px); background: var(--accent); color: #fff; }
 
 .kicker {
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
@@ -80,10 +82,28 @@ h1 {
 /* ---------- canvas ---------- */
 .canvas-layer { position: fixed; inset: 0; z-index: 10; }
 .canvas-layer canvas { display: block; }
+.canvas-layer::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 62% 48% at 50% 52%, rgba(255, 77, 0, 0.05), transparent 68%);
+}
 .poster {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; z-index: 2; pointer-events: none;
   transition: opacity 0.6s ease 0.1s;
+}
+.grain {
+  position: fixed; inset: -100px; z-index: 15; pointer-events: none;
+  opacity: 0.05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 9s steps(10) infinite;
+}
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-4%, -6%); }
+  30% { transform: translate(5%, -3%); }
+  50% { transform: translate(-6%, 4%); }
+  70% { transform: translate(4%, 6%); }
+  90% { transform: translate(-3%, 2%); }
 }
 
 /* ---------- preloader ---------- */
@@ -110,7 +130,7 @@ h1 {
   stroke: var(--hairline); stroke-width: 1;
   transition: stroke 0.2s;
 }
-.callout-g circle { fill: var(--fg); transition: fill 0.2s, r 0.2s; }
+.callout-g circle { fill: var(--fg); transition: fill 0.2s; }
 .callout-g.hovered line { stroke: var(--accent); stroke-width: 1.5; }
 .callout-g.hovered circle { fill: var(--accent); }
 
@@ -121,7 +141,8 @@ h1 {
   letter-spacing: -0.01em; color: var(--fg);
   padding: 8px 10px; border-radius: 10px;
   max-width: 220px; text-align: inherit;
-  transition: color 0.2s, background 0.2s, transform 0.2s;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  transition: color 0.2s, transform 0.2s;
 }
 .callout-label.side-left { left: clamp(16px, 4vw, 64px); text-align: left; }
 .callout-label.side-right { right: clamp(16px, 4vw, 64px); text-align: right; }
@@ -143,9 +164,9 @@ h1 {
   top: 50%; right: clamp(18px, 4vw, 64px);
   transform: translateY(-50%);
   width: min(380px, calc(100vw - 36px));
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  background: var(--glass);
+  backdrop-filter: blur(26px) saturate(1.3);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
   border-radius: 22px;
   box-shadow: var(--card-shadow);
   padding: 30px 30px 24px;
@@ -167,48 +188,52 @@ h1 {
 .card-specs li {
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em;
   padding: 6px 12px; border-radius: 999px;
-  background: rgba(29, 29, 31, 0.06); color: var(--fg);
+  background: rgba(255, 77, 0, 0.12); color: var(--fg);
+  box-shadow: inset 0 0 0 1px rgba(255, 77, 0, 0.28);
 }
 .card-close {
   position: absolute; top: 14px; right: 16px;
-  background: rgba(29, 29, 31, 0.06); border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); border: none; cursor: pointer;
   width: 30px; height: 30px; border-radius: 50%;
   font-size: 18px; line-height: 1; color: var(--fg-muted);
   transition: background 0.2s, color 0.2s;
 }
-.card-close:hover { background: rgba(29, 29, 31, 0.12); color: var(--fg); }
+.card-close:hover { background: rgba(255, 255, 255, 0.16); color: var(--fg); }
 .card-nav {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 22px; padding-top: 16px;
-  border-top: 1px solid rgba(29, 29, 31, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .card-nav span {
   font-family: var(--mono); font-size: 11.5px; color: var(--fg-faint);
   font-variant-numeric: tabular-nums;
 }
 .card-nav button {
-  background: rgba(29, 29, 31, 0.06); border: none; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); border: none; cursor: pointer;
   width: 38px; height: 38px; border-radius: 50%;
   font-size: 16px; color: var(--fg);
   transition: background 0.2s, transform 0.2s;
 }
-.card-nav button:hover { background: rgba(29, 29, 31, 0.12); transform: scale(1.06); }
+.card-nav button:hover { background: rgba(255, 77, 0, 0.85); transform: scale(1.06); }
 
 /* ---------- overview pill ---------- */
 .overview-pill {
   position: fixed; z-index: 60; bottom: 26px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: none; cursor: pointer;
   font-family: var(--sans); font-size: 13.5px; font-weight: 500; color: var(--fg);
   padding: 11px 22px; border-radius: 999px;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 1px var(--glass-stroke), 0 12px 34px rgba(0, 0, 0, 0.45);
   animation: pillIn 0.5s cubic-bezier(0.32, 0.72, 0.24, 1) 0.4s both;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.overview-pill:hover { transform: translateX(-50%) translateY(-2px); }
+.overview-pill:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 77, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.55);
+}
 @keyframes pillIn {
   from { opacity: 0; transform: translateX(-50%) translateY(14px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -219,15 +244,16 @@ h1 {
   position: fixed; bottom: 22px; right: 22px; z-index: 200;
   display: flex; align-items: center; gap: 4px;
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
-  background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(14px);
+  background: var(--glass); backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   padding: 6px; border-radius: 999px;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 0 0 1px var(--glass-stroke), 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 .version-switch a, .version-switch .vs-active {
   padding: 6px 12px; border-radius: 999px; text-decoration: none;
   color: var(--fg-muted); transition: color 0.2s, background 0.2s;
 }
-.version-switch a:hover { color: var(--fg); background: rgba(29, 29, 31, 0.05); }
+.version-switch a:hover { color: var(--fg); background: rgba(255, 255, 255, 0.07); }
 .version-switch .vs-active { background: var(--fg); color: var(--bg); }
 
 /* ---------- a11y ---------- */

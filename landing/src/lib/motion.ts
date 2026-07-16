@@ -13,6 +13,10 @@ export const motion = {
   spinDrag: 0,
   /** 0..1 exploded-view progress (V2) */
   explode: 0,
+  /** single-part extraction: the named part group slides out along its
+   *  explode vector (V1 chapters, V3 selection) */
+  extractName: '',
+  extract: 0,
   /** node name of the focused part, '' = none */
   focus: '',
   /** pointer parallax input, -1..1 */

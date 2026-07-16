@@ -119,9 +119,21 @@ export function App() {
             if (self.isActive) {
               motion.focus = anchor;
               section.classList.add('active');
+              gsap.killTweensOf(motion, 'extract');
+              if (anchor !== 'chassis-upper') {
+                // the featured part slides out of the assembly for its chapter
+                motion.extractName = anchor;
+                gsap.to(motion, { extract: 0.55, duration: 1.1, ease: 'power3.out' });
+              } else {
+                gsap.to(motion, { extract: 0, duration: 0.7, ease: 'power3.inOut' });
+              }
             } else {
               section.classList.remove('active');
               if (motion.focus === anchor) motion.focus = '';
+              if (motion.extractName === anchor) {
+                gsap.killTweensOf(motion, 'extract');
+                gsap.to(motion, { extract: 0, duration: 0.8, ease: 'power3.inOut' });
+              }
             }
           },
         });

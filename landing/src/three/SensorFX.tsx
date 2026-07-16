@@ -2,16 +2,22 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { motion } from '../lib/motion';
-
-const LIDAR_POS: [number, number, number] = [0.03, 0.685, -0.72];
-const MIC_POSITIONS: [number, number, number][] = [
-  [1.04, 0.07, -0.39],
-  [0.0, 0.03, -0.77],
-  [-1.04, 0.04, -0.39],
-];
-const TOF_POS: [number, number, number] = [-0.02, -0.79, -0.79];
+import { partRegistry } from './ModuleModel';
 
 type Props = { accent: string };
+
+const tmp = new THREE.Vector3();
+
+/** Position `ref` at a part's live world anchor each frame, so effects track
+ *  extraction / explode / spin automatically. */
+function trackPart(name: string, obj: THREE.Object3D | null) {
+  if (!obj) return;
+  const entry = partRegistry.get(name);
+  if (!entry) return;
+  tmp.copy(entry.anchorLocal);
+  entry.obj.localToWorld(tmp);
+  obj.position.copy(tmp);
+}
 
 /** Per-chapter accent effects: LiDAR sweep, mic pulse rings, ToF depth grid.
  *  All tiny additive meshes, opacity damped by motion.focus. */
@@ -34,7 +40,8 @@ function useFocusFade(active: () => boolean, lambda = 5) {
 }
 
 function LidarSweep({ accent }: { accent: string }) {
-  const group = useRef<THREE.Group>(null);
+  const root = useRef<THREE.Group>(null);
+  const spin = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const ringMatRef = useRef<THREE.LineBasicMaterial>(null);
   const fade = useFocusFade(() => motion.focus === 'lidar-ld19');
@@ -55,16 +62,17 @@ function LidarSweep({ accent }: { accent: string }) {
   }, []);
 
   useFrame((state) => {
-    if (!group.current || !matRef.current || !ringMatRef.current) return;
-    group.current.visible = fade.current > 0.01;
-    group.current.rotation.y = state.clock.elapsedTime * 1.4;
+    if (!root.current || !spin.current || !matRef.current || !ringMatRef.current) return;
+    trackPart('lidar-ld19', root.current);
+    root.current.visible = fade.current > 0.01;
+    spin.current.rotation.y = state.clock.elapsedTime * 1.4;
     matRef.current.opacity = fade.current * 0.16;
     ringMatRef.current.opacity = fade.current * 0.35;
   });
 
   return (
-    <group position={LIDAR_POS}>
-      <group ref={group}>
+    <group ref={root}>
+      <group ref={spin}>
         <mesh geometry={sector}>
           <meshBasicMaterial
             ref={matRef}
@@ -91,65 +99,75 @@ function LidarSweep({ accent }: { accent: string }) {
   );
 }
 
+const MIC_PARTS: { name: string; rotY: number }[] = [
+  { name: 'mic-a', rotY: -Math.PI / 2 },
+  { name: 'mic-b', rotY: 0 },
+  { name: 'mic-c', rotY: Math.PI / 2 },
+];
+
 function MicRings({ accent }: { accent: string }) {
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const groupRefs = useRef<(THREE.Group | null)[]>([]);
+  const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
   const fade = useFocusFade(() => motion.focus === 'mic-b');
 
-  const geo = useMemo(() => {
-    const g = new THREE.RingGeometry(0.96, 1.0, 40);
-    return g;
-  }, []);
+  const geo = useMemo(() => new THREE.RingGeometry(0.96, 1.0, 40), []);
 
   useFrame((state) => {
-    refs.current.forEach((mesh, i) => {
-      if (!mesh) return;
-      const t = (state.clock.elapsedTime * 0.55 + i * 0.33) % 1;
-      const scale = 0.12 + t * 0.55;
-      mesh.visible = fade.current > 0.01;
-      mesh.scale.setScalar(scale);
-      const mat = mesh.material as THREE.MeshBasicMaterial;
-      mat.opacity = fade.current * (1 - t) * 0.5;
+    MIC_PARTS.forEach((mic, mi) => {
+      trackPart(mic.name, groupRefs.current[mi]);
+      [0, 1, 2].forEach((ri) => {
+        const mesh = meshRefs.current[mi * 3 + ri];
+        if (!mesh) return;
+        const t = (state.clock.elapsedTime * 0.55 + ri * 0.33) % 1;
+        mesh.visible = fade.current > 0.01;
+        mesh.scale.setScalar(0.12 + t * 0.55);
+        (mesh.material as THREE.MeshBasicMaterial).opacity = fade.current * (1 - t) * 0.5;
+      });
     });
   });
 
   return (
     <>
-      {MIC_POSITIONS.map((pos, mi) =>
-        [0, 1, 2].map((ri) => (
-          <mesh
-            key={`${mi}-${ri}`}
-            geometry={geo}
-            position={pos}
-            rotation={[0, mi === 0 ? -Math.PI / 2 : mi === 2 ? Math.PI / 2 : 0, 0]}
-            ref={(el) => {
-              refs.current[mi * 3 + ri] = el;
-            }}
-          >
-            <meshBasicMaterial
-              color={accent}
-              transparent
-              opacity={0}
-              side={THREE.DoubleSide}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-              toneMapped={false}
-            />
-          </mesh>
-        )),
-      )}
+      {MIC_PARTS.map((mic, mi) => (
+        <group
+          key={mic.name}
+          rotation={[0, mic.rotY, 0]}
+          ref={(el) => { groupRefs.current[mi] = el; }}
+        >
+          {[0, 1, 2].map((ri) => (
+            <mesh
+              key={ri}
+              geometry={geo}
+              ref={(el) => { meshRefs.current[mi * 3 + ri] = el; }}
+            >
+              <meshBasicMaterial
+                color={accent}
+                transparent
+                opacity={0}
+                side={THREE.DoubleSide}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
     </>
   );
 }
 
 function TofGrid({ accent }: { accent: string }) {
+  const root = useRef<THREE.Group>(null);
   const ref = useRef<THREE.InstancedMesh>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const fade = useFocusFade(() => motion.focus === 'tof-8x8');
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame((state) => {
-    if (!ref.current || !matRef.current) return;
-    ref.current.visible = fade.current > 0.01;
+    if (!root.current || !ref.current || !matRef.current) return;
+    trackPart('tof-8x8', root.current);
+    root.current.visible = fade.current > 0.01;
     matRef.current.opacity = fade.current * 0.85;
     const t = state.clock.elapsedTime;
     let i = 0;
@@ -157,12 +175,11 @@ function TofGrid({ accent }: { accent: string }) {
       for (let x = 0; x < 8; x++) {
         const wave = Math.sin(t * 2.2 - (x + y) * 0.35) * 0.5 + 0.5;
         dummy.position.set(
-          TOF_POS[0] + (x - 3.5) * 0.075,
-          TOF_POS[1] + (y - 3.5) * 0.075,
-          TOF_POS[2] - 0.24 - wave * 0.28 * fade.current,
+          (x - 3.5) * 0.075,
+          (y - 3.5) * 0.075,
+          -0.24 - wave * 0.28 * fade.current,
         );
-        const s = 0.011 + wave * 0.011;
-        dummy.scale.setScalar(s);
+        dummy.scale.setScalar(0.011 + wave * 0.011);
         dummy.updateMatrix();
         ref.current.setMatrixAt(i++, dummy.matrix);
       }
@@ -171,17 +188,19 @@ function TofGrid({ accent }: { accent: string }) {
   });
 
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, 64]}>
-      <sphereGeometry args={[1, 8, 8]} />
-      <meshBasicMaterial
-        ref={matRef}
-        color={accent}
-        transparent
-        opacity={0}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </instancedMesh>
+    <group ref={root}>
+      <instancedMesh ref={ref} args={[undefined, undefined, 64]}>
+        <sphereGeometry args={[1, 8, 8]} />
+        <meshBasicMaterial
+          ref={matRef}
+          color={accent}
+          transparent
+          opacity={0}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </instancedMesh>
+    </group>
   );
 }

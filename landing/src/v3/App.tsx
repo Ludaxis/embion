@@ -3,18 +3,40 @@ import { Canvas } from '@react-three/fiber';
 import { Preload, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
+import { getGPUTier } from 'detect-gpu';
 import { motion, screenAnchors } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
-import { ModuleModel } from '../three/ModuleModel';
+import { ModuleModel, EXPLODE } from '../three/ModuleModel';
 import { Stage } from '../three/Stage';
 import { CameraRig } from '../three/CameraRig';
+import { SensorFX } from '../three/SensorFX';
 import {
   BRAND, PRODUCT_CODE, CHAPTERS, BUILD_LOG_URL, CONTACT_MAILTO,
 } from '../content/product';
 
+const ACCENT = '#ff4d00';
+
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
-const OVERVIEW = { cam: [0, 0.42, -4.95] as const, look: [0, 0.34, 0] as const };
+const OVERVIEW = { cam: [0, 0.4, -5.45] as const, look: [0, 0.3, 0] as const };
+
+/** Camera pose shifted toward where the part sits once extracted. */
+function extractedPose(part: ExplorePart) {
+  const v = EXPLODE[part.anchor] ?? [0, 0, 0];
+  return {
+    cam: [
+      part.pose.cam[0] + v[0] * 0.55,
+      part.pose.cam[1] + v[1] * 0.55,
+      part.pose.cam[2] + v[2] * 0.55,
+    ] as const,
+    look: [
+      part.pose.look[0] + v[0] * 0.75,
+      part.pose.look[1] + v[1] * 0.75,
+      part.pose.look[2] + v[2] * 0.75,
+    ] as const,
+  };
+}
 
 type ExplorePart = {
   id: string;
@@ -94,7 +116,12 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [effectsOn, setEffectsOn] = useState(false);
   const reduced = prefersReducedMotion();
+
+  useEffect(() => {
+    getGPUTier().then((t) => setEffectsOn((t.tier ?? 0) >= 2 && !t.isMobile));
+  }, []);
 
   // pointer parallax (subtle, desktop only)
   useEffect(() => {
@@ -143,15 +170,32 @@ export function App() {
       setSelected(id);
       setHovered(null);
       const part = partById(id);
+      gsap.killTweensOf(motion, 'extract');
       if (part) {
         motion.focus = part.anchor;
-        flyTo(part.pose);
+        // extraction: tuck the previous part back in, then slide this one out
+        const switching =
+          motion.extractName && motion.extractName !== part.anchor && motion.extract > 0.01;
+        const tl = gsap.timeline();
+        if (switching) {
+          tl.to(motion, { extract: 0, duration: reduced ? 0 : 0.35, ease: 'power2.in' });
+          tl.call(() => { motion.extractName = part.anchor; });
+        } else {
+          motion.extractName = part.anchor;
+        }
+        tl.to(
+          motion,
+          { extract: 1, duration: reduced ? 0 : 1.15, ease: 'power3.out' },
+          switching ? '>' : 0.3,
+        );
+        flyTo(extractedPose(part));
       } else {
         motion.focus = '';
+        gsap.to(motion, { extract: 0, duration: reduced ? 0 : 0.75, ease: 'power3.inOut' });
         flyTo(OVERVIEW);
       }
     },
-    [flyTo],
+    [flyTo, reduced],
   );
 
   // Esc closes
@@ -202,7 +246,7 @@ export function App() {
       <div className="canvas-layer">
         <img
           className="poster"
-          src="/posters/poster-light.webp"
+          src="/posters/poster-dark.webp"
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
@@ -215,13 +259,14 @@ export function App() {
             antialias: true,
             powerPreference: 'high-performance',
             stencil: false,
-            toneMapping: THREE.NeutralToneMapping,
+            toneMapping: THREE.AgXToneMapping,
+            toneMappingExposure: 1.22,
           }}
           frameloop={reduced ? 'demand' : 'always'}
           onPointerMissed={() => selected && select(null)}
         >
           <Suspense fallback={null}>
-            <Stage theme="light" />
+            <Stage theme="dark" floor={effectsOn ? 'reflect' : 'none'} />
             <group
               onPointerMove={(e) => {
                 e.stopPropagation();
@@ -234,13 +279,23 @@ export function App() {
                 if (id) select(id);
               }}
             >
-              <ModuleModel theme="light" dimStyle="fade" />
+              <ModuleModel theme="dark" dimStyle="darken" />
             </group>
+            <SensorFX accent={ACCENT} />
             <CameraRig />
+            {effectsOn && (
+              <EffectComposer multisampling={4}>
+                <N8AO halfRes aoRadius={0.4} intensity={3.2} distanceFalloff={0.5} />
+                <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
+                <Vignette darkness={0.5} offset={0.24} />
+              </EffectComposer>
+            )}
             <Preload all />
           </Suspense>
         </Canvas>
       </div>
+
+      <div className="grain" aria-hidden="true" />
 
       <Callouts hovered={hovered} onHover={setHovered} onSelect={select} />
 

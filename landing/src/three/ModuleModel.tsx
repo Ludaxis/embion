@@ -35,8 +35,8 @@ const FOCUS_GROUPS: Record<string, string[]> = {
   'chassis-upper': [...PART_NAMES],
 };
 
-/** World-space exploded-view offsets (V2). */
-const EXPLODE: Record<string, [number, number, number]> = {
+/** World-space exploded-view offsets (V2 explode + part extraction). */
+export const EXPLODE: Record<string, [number, number, number]> = {
   'lidar-ld19': [0, 0.55, 0],
   imu: [0, 0.95, 0],
   'mount-top': [0, 0.25, 0],
@@ -154,11 +154,18 @@ export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
 
     const focusSet = motion.focus ? FOCUS_GROUPS[motion.focus] ?? [motion.focus] : null;
 
+    const extractSet =
+      motion.extractName && motion.extractName !== 'chassis-upper'
+        ? FOCUS_GROUPS[motion.extractName] ?? [motion.extractName]
+        : null;
+
     for (const [name, p] of parts) {
-      // exploded view
-      p.obj.position
-        .copy(p.basePos)
-        .addScaledVector(p.explodeLocal, easeInOut(motion.explode));
+      // global exploded view + single-part extraction
+      let spread = easeInOut(motion.explode);
+      if (extractSet && extractSet.includes(name)) {
+        spread += easeInOut(motion.extract);
+      }
+      p.obj.position.copy(p.basePos).addScaledVector(p.explodeLocal, spread);
 
       // focus dimming
       const target = !focusSet || focusSet.includes(name) ? 1 : dimTarget;
