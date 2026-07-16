@@ -73,7 +73,7 @@ function LidarSweep({ accent }: { accent: string }) {
   return (
     <group ref={root}>
       <group ref={spin}>
-        <mesh geometry={sector}>
+        <mesh geometry={sector} renderOrder={-1}>
           <meshBasicMaterial
             ref={matRef}
             color={accent}
@@ -86,7 +86,7 @@ function LidarSweep({ accent }: { accent: string }) {
           />
         </mesh>
       </group>
-      <lineLoop geometry={ring}>
+      <lineLoop geometry={ring} renderOrder={-1}>
         <lineBasicMaterial
           ref={ringMatRef}
           color={accent}
@@ -99,10 +99,10 @@ function LidarSweep({ accent }: { accent: string }) {
   );
 }
 
-const MIC_PARTS: { name: string; rotY: number }[] = [
-  { name: 'mic-a', rotY: -Math.PI / 2 },
-  { name: 'mic-b', rotY: 0 },
-  { name: 'mic-c', rotY: Math.PI / 2 },
+const MIC_PARTS: { name: string; rotY: number; out: [number, number, number] }[] = [
+  { name: 'mic-a', rotY: -Math.PI / 2, out: [0.09, 0, 0] },
+  { name: 'mic-b', rotY: 0, out: [0, 0, -0.09] },
+  { name: 'mic-c', rotY: Math.PI / 2, out: [-0.09, 0, 0] },
 ];
 
 function MicRings({ accent }: { accent: string }) {
@@ -115,8 +115,14 @@ function MicRings({ accent }: { accent: string }) {
   useFrame((state) => {
     MIC_PARTS.forEach((mic, mi) => {
       trackPart(mic.name, groupRefs.current[mi]);
-      // bounds center sits on the PCB; lift to the capsule port
-      if (groupRefs.current[mi]) groupRefs.current[mi]!.position.y += 0.06;
+      const g = groupRefs.current[mi];
+      if (g) {
+        // bounds center sits on the PCB; lift to the capsule port and step
+        // just outside the housing so rings never intersect it
+        g.position.y += 0.06;
+        g.position.x += mic.out[0];
+        g.position.z += mic.out[2];
+      }
       [0, 1, 2].forEach((ri) => {
         const mesh = meshRefs.current[mi * 3 + ri];
         if (!mesh) return;
@@ -140,6 +146,7 @@ function MicRings({ accent }: { accent: string }) {
             <mesh
               key={ri}
               geometry={geo}
+              renderOrder={-1}
               ref={(el) => { meshRefs.current[mi * 3 + ri] = el; }}
             >
               <meshBasicMaterial
@@ -191,7 +198,7 @@ function TofGrid({ accent }: { accent: string }) {
 
   return (
     <group ref={root}>
-      <instancedMesh ref={ref} args={[undefined, undefined, 64]}>
+      <instancedMesh ref={ref} args={[undefined, undefined, 64]} renderOrder={-1}>
         <sphereGeometry args={[1, 8, 8]} />
         <meshBasicMaterial
           ref={matRef}
