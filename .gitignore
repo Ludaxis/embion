@@ -1,0 +1,12 @@
+# dependencies / build output
+node_modules/
+dist/
+.vercel
+
+# source 3D asset — 152 MB, exceeds GitHub's 100 MB file limit.
+# The optimized web model lives at landing/public/models/module.glb;
+# regenerate it from this source with landing/scripts/optimize-model.mjs.
+path_planner_module.glb
+
+# OS noise
+.DS_Store

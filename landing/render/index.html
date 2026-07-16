@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMB-01 render rig</title>
+    <meta name="robots" content="noindex" />
+  </head>
+  <body>
+    <script>
+      // Occluded/minimized Chrome windows freeze rAF and ResizeObserver,
+      // which stalls R3F boot. ?drive=timer swaps both for timer-driven
+      // equivalents so the rig can render headlessly.
+      (function () {
+        if (new URLSearchParams(location.search).get('drive') !== 'timer') return;
+        window.requestAnimationFrame = function (cb) {
+          return setTimeout(function () { cb(performance.now()); }, 33);
+        };
+        window.cancelAnimationFrame = function (id) { clearTimeout(id); };
+        window.ResizeObserver = class {
+          constructor(cb) { this.cb = cb; this.els = []; }
+          observe(el) {
+            this.els.push(el);
+            const fire = () => {
+              const entries = this.els.map((t) => ({ target: t, contentRect: t.getBoundingClientRect() }));
+              this.cb(entries, this);
+            };
+            fire();
+            this._i = this._i || setInterval(fire, 500);
+          }
+          unobserve() {}
+          disconnect() { clearInterval(this._i); }
+        };
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/render/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMBION EMB-01 — Explore the Hardware</title>
+    <meta
+      name="description"
+      content="Interactive tour of the EMB-01 multimodal perception module: click any component — 360° LiDAR, 10-axis IMU, global-shutter camera, 8×8 ToF grid, directional microphones, Jetson Orin Nano Super — to explore it in 3D."
+    />
+    <meta property="og:title" content="EMBION EMB-01 — Explore the Hardware" />
+    <meta
+      property="og:description"
+      content="Click any component of the EMB-01 perception module to explore it in 3D."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/posters/og-image.jpg" />
+    <link rel="preload" as="image" href="/posters/poster-light.webp" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fbfbfd'/%3E%3Cpath d='M9 8h14v3.4H13v4.2h9v3.4h-9v4.6h10V27H9z' fill='%231d1d1f'/%3E%3C/svg%3E"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "EMBION EMB-01 Multimodal Perception Module",
+        "description": "Plug-and-play multimodal perception module fusing 2D LiDAR, 10-axis IMU, global-shutter camera, 8x8 ToF ranging and a 3-microphone array on NVIDIA Jetson Orin Nano Super into one synchronized video stream.",
+        "brand": { "@type": "Brand", "name": "EMBION" },
+        "category": "Robotics Sensor Module"
+      }
+    </script>
+    <script>
+      // Same headless escape hatch as the render rig: ?drive=timer swaps the
+      // frame schedulers so the page can render in an occluded window.
+      (function () {
+        if (new URLSearchParams(location.search).get('drive') !== 'timer') return;
+        window.requestAnimationFrame = function (cb) {
+          return setTimeout(function () { cb(performance.now()); }, 33);
+        };
+        window.cancelAnimationFrame = function (id) { clearTimeout(id); };
+        window.ResizeObserver = class {
+          constructor(cb) { this.cb = cb; this.els = []; }
+          observe(el) {
+            this.els.push(el);
+            const fire = () => {
+              const entries = this.els.map((t) => ({ target: t, contentRect: t.getBoundingClientRect() }));
+              this.cb(entries, this);
+            };
+            fire();
+            this._i = this._i || setInterval(fire, 500);
+          }
+          unobserve() {}
+          disconnect() { clearInterval(this._i); }
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/v3/main.tsx"></script>
+  </body>
+</html>
