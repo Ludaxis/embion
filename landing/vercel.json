@@ -1,0 +1,25 @@
+{
+  "redirects": [
+    { "source": "/v1", "destination": "/", "permanent": false },
+    { "source": "/v1/:path*", "destination": "/", "permanent": false },
+    { "source": "/01", "destination": "/", "permanent": false },
+    { "source": "/02", "destination": "/v2/", "permanent": false },
+    { "source": "/03", "destination": "/v3/", "permanent": false },
+    { "source": "/explore", "destination": "/v3/", "permanent": false },
+    { "source": "/blueprint", "destination": "/v2/", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/models/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/posters/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    }
+  ]
+}
