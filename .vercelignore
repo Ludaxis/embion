@@ -1,0 +1,6 @@
+# never upload to Vercel builds
+path_planner_module.glb
+node_modules
+dist
+landing/renders
+.git
