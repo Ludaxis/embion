@@ -115,13 +115,15 @@ function MicRings({ accent }: { accent: string }) {
   useFrame((state) => {
     MIC_PARTS.forEach((mic, mi) => {
       trackPart(mic.name, groupRefs.current[mi]);
+      // bounds center sits on the PCB; lift to the capsule port
+      if (groupRefs.current[mi]) groupRefs.current[mi]!.position.y += 0.06;
       [0, 1, 2].forEach((ri) => {
         const mesh = meshRefs.current[mi * 3 + ri];
         if (!mesh) return;
         const t = (state.clock.elapsedTime * 0.55 + ri * 0.33) % 1;
         mesh.visible = fade.current > 0.01;
-        mesh.scale.setScalar(0.12 + t * 0.55);
-        (mesh.material as THREE.MeshBasicMaterial).opacity = fade.current * (1 - t) * 0.5;
+        mesh.scale.setScalar(0.07 + t * 0.2);
+        (mesh.material as THREE.MeshBasicMaterial).opacity = fade.current * (1 - t) * 0.32;
       });
     });
   });
@@ -168,18 +170,18 @@ function TofGrid({ accent }: { accent: string }) {
     if (!root.current || !ref.current || !matRef.current) return;
     trackPart('tof-8x8', root.current);
     root.current.visible = fade.current > 0.01;
-    matRef.current.opacity = fade.current * 0.85;
+    matRef.current.opacity = fade.current * 0.6;
     const t = state.clock.elapsedTime;
     let i = 0;
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const wave = Math.sin(t * 2.2 - (x + y) * 0.35) * 0.5 + 0.5;
         dummy.position.set(
-          (x - 3.5) * 0.075,
-          (y - 3.5) * 0.075,
-          -0.24 - wave * 0.28 * fade.current,
+          (x - 3.5) * 0.065,
+          (y - 3.5) * 0.065,
+          -0.14 - wave * 0.14 * fade.current,
         );
-        dummy.scale.setScalar(0.011 + wave * 0.011);
+        dummy.scale.setScalar(0.0055 + wave * 0.0045);
         dummy.updateMatrix();
         ref.current.setMatrixAt(i++, dummy.matrix);
       }

@@ -7,7 +7,7 @@ import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessi
 import { getGPUTier } from 'detect-gpu';
 import { motion, screenAnchors } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
-import { ModuleModel, EXPLODE } from '../three/ModuleModel';
+import { ModuleModel, EXTRACT_VECTORS } from '../three/ModuleModel';
 import { Stage } from '../three/Stage';
 import { CameraRig } from '../three/CameraRig';
 import { SensorFX } from '../three/SensorFX';
@@ -19,23 +19,24 @@ const ACCENT = '#ff4d00';
 
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
-const OVERVIEW = { cam: [0, 0.4, -5.45] as const, look: [0, 0.3, 0] as const };
+const OVERVIEW = { cam: [0, 0.4, -5.9] as const, look: [0, 0.28, 0] as const };
 
-/** Camera pose shifted toward where the part sits once extracted. */
+/** Camera pose shifted toward where the part sits once extracted, pulled
+ *  back ~12% for breathing room around the subject. */
 function extractedPose(part: ExplorePart) {
-  const v = EXPLODE[part.anchor] ?? [0, 0, 0];
-  return {
-    cam: [
-      part.pose.cam[0] + v[0] * 0.55,
-      part.pose.cam[1] + v[1] * 0.55,
-      part.pose.cam[2] + v[2] * 0.55,
-    ] as const,
-    look: [
-      part.pose.look[0] + v[0] * 0.75,
-      part.pose.look[1] + v[1] * 0.75,
-      part.pose.look[2] + v[2] * 0.75,
-    ] as const,
-  };
+  const v = EXTRACT_VECTORS[part.anchor] ?? [0, 0, 0];
+  const look = [
+    part.pose.look[0] + v[0] * 0.75,
+    part.pose.look[1] + v[1] * 0.75,
+    part.pose.look[2] + v[2] * 0.75,
+  ] as const;
+  const PULL = 1.28;
+  const cam = [
+    look[0] + (part.pose.cam[0] + v[0] * 0.55 - look[0]) * PULL,
+    look[1] + (part.pose.cam[1] + v[1] * 0.55 - look[1]) * PULL,
+    look[2] + (part.pose.cam[2] + v[2] * 0.55 - look[2]) * PULL,
+  ] as const;
+  return { cam, look };
 }
 
 type ExplorePart = {
@@ -82,7 +83,7 @@ const PARTS: ExplorePart[] = [
   {
     id: 'tof', chapter: 'tof', anchor: 'tof-8x8', labelAnchor: 'tof-8x8',
     label: '8×8 ToF ranging sensor', side: 'right', top: 74,
-    pose: { cam: [0.9, -1.35, -1.75], look: [-0.02, -0.78, -0.7] },
+    pose: { cam: [1.8, -0.85, -2.3], look: [-0.05, -0.92, -1.05] },
   },
 ];
 
@@ -154,13 +155,64 @@ export function App() {
     );
   }, [loaded, reduced]);
 
+  const flyRef = useRef<{ proxy: { t: number } } | null>(null);
+
   const flyTo = useCallback(
     (pose: { cam: readonly [number, number, number]; look: readonly [number, number, number] }) => {
       gsap.killTweensOf(motion.cam);
       gsap.killTweensOf(motion.look);
+      if (flyRef.current) gsap.killTweensOf(flyRef.current.proxy);
       const d = reduced ? 0 : 1.25;
-      gsap.to(motion.cam, { x: pose.cam[0], y: pose.cam[1], z: pose.cam[2], duration: d, ease: 'power3.inOut' });
-      gsap.to(motion.look, { x: pose.look[0], y: pose.look[1], z: pose.look[2], duration: d, ease: 'power3.inOut' });
+
+      gsap.to(motion.look, {
+        x: pose.look[0], y: pose.look[1], z: pose.look[2],
+        duration: d, ease: 'power3.inOut',
+      });
+
+      const from = new THREE.Vector3(motion.cam.x, motion.cam.y, motion.cam.z);
+      const to = new THREE.Vector3(pose.cam[0], pose.cam[1], pose.cam[2]);
+      const pivot = new THREE.Vector3(
+        (motion.look.x + pose.look[0]) / 2,
+        (motion.look.y + pose.look[1]) / 2,
+        (motion.look.z + pose.look[2]) / 2,
+      );
+      const a = from.clone().sub(pivot);
+      const b = to.clone().sub(pivot);
+      const angle = a.angleTo(b);
+
+      if (reduced || angle < 0.9) {
+        gsap.to(motion.cam, {
+          x: to.x, y: to.y, z: to.z,
+          duration: d, ease: 'power3.inOut',
+        });
+        return;
+      }
+
+      // Wide swing: quadratic-bezier arc through an outward control point so
+      // the camera orbits AROUND the module instead of diving through it.
+      const mid = a.clone().add(b).multiplyScalar(0.5);
+      if (mid.length() < 0.4) mid.set(-a.z, Math.max(a.y, b.y), a.x); // near-opposite sides
+      mid.setLength(Math.max(a.length(), b.length()) * 1.18).add(pivot);
+      const proxy = { t: 0 };
+      flyRef.current = { proxy };
+      const p = new THREE.Vector3();
+      gsap.to(proxy, {
+        t: 1,
+        duration: d * 1.2,
+        ease: 'power2.inOut',
+        onUpdate: () => {
+          const t = proxy.t;
+          const it = 1 - t;
+          p.set(
+            it * it * from.x + 2 * it * t * mid.x + t * t * to.x,
+            it * it * from.y + 2 * it * t * mid.y + t * t * to.y,
+            it * it * from.z + 2 * it * t * mid.z + t * t * to.z,
+          );
+          motion.cam.x = p.x;
+          motion.cam.y = p.y;
+          motion.cam.z = p.z;
+        },
+      });
     },
     [reduced],
   );
@@ -185,7 +237,7 @@ export function App() {
         }
         tl.to(
           motion,
-          { extract: 1, duration: reduced ? 0 : 1.15, ease: 'power3.out' },
+          { extract: 1, duration: reduced ? 0 : 1.2, ease: 'back.out(1.15)' },
           switching ? '>' : 0.3,
         );
         flyTo(extractedPose(part));

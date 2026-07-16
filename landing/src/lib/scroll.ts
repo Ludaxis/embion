@@ -1,12 +1,18 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { markDirty } from './motion';
+import { markDirty, motion } from './motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
 export const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const QA = import.meta.env.DEV || new URLSearchParams(location.search).get('qa') === '1';
+if (QA) {
+  (window as unknown as { __gsap: typeof gsap; __motion: typeof motion }).__gsap = gsap;
+  (window as unknown as { __gsap: typeof gsap; __motion: typeof motion }).__motion = motion;
+}
 
 let lenis: Lenis | null = null;
 
@@ -25,7 +31,7 @@ export function initScroll() {
   });
   gsap.ticker.lagSmoothing(0);
   if ('ontouchstart' in window) ScrollTrigger.normalizeScroll(true);
-  if (import.meta.env.DEV) (window as unknown as { __lenis: Lenis }).__lenis = lenis;
+  if (QA) (window as unknown as { __lenis: Lenis }).__lenis = lenis;
   return lenis;
 }
 

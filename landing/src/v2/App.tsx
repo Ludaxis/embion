@@ -24,14 +24,14 @@ const BEATS: {
   look: [number, number, number];
   explode: number;
 }[] = [
-  { cam: [-2.35, 0.42, -4.35], look: [0.28, 0.0, 0], explode: 0 },       // hero
+  { cam: [-2.55, 0.46, -4.8], look: [0.28, 0.0, 0], explode: 0 },        // hero
   { cam: [-2.2, 1.0, -2.95], look: [0.1, 0.9, -0.7], explode: 0.45 },   // lidar
   { cam: [-1.9, 1.55, -2.6], look: [0.12, 1.6, -0.73], explode: 0.75 }, // imu
   { cam: [-2.6, 0.35, -3.6], look: [0.1, 0.05, -0.5], explode: 1 },     // mics
   { cam: [-1.85, -0.3, -2.75], look: [0.12, -0.42, -1.25], explode: 1 },// camera
   { cam: [-1.75, -0.95, -2.6], look: [0.12, -1.0, -1.55], explode: 1 }, // tof
   { cam: [2.6, 0.95, 3.55], look: [-1.35, 0.45, 1.35], explode: 1 },    // jetson (rear view)
-  { cam: [-2.35, 0.42, -4.35], look: [0.28, 0.0, 0], explode: 0 },       // reassemble
+  { cam: [-2.55, 0.46, -4.8], look: [0.28, 0.0, 0], explode: 0 },        // reassemble
 ];
 
 export function App() {
@@ -82,7 +82,7 @@ export function App() {
       if (!loaded || reduced) return;
       initScroll();
 
-      gsap.fromTo(
+      const introCam = gsap.fromTo(
         motion.cam,
         { x: -3.4, y: 1.3, z: -4.6 },
         { ...vec(BEATS[0].cam), duration: 1.6, ease: 'power3.out' },
@@ -95,6 +95,9 @@ export function App() {
           start: 'top top',
           end: 'bottom bottom',
           scrub: 1,
+          onUpdate: () => {
+            if (introCam.isActive()) introCam.progress(1).kill();
+          },
           snap: {
             snapTo: 'labelsDirectional',
             duration: { min: 0.2, max: 0.5 },

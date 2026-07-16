@@ -7,7 +7,7 @@ import { getGPUTier } from 'detect-gpu';
 import { useGSAP } from '@gsap/react';
 import { gsap, ScrollTrigger, initScroll, prefersReducedMotion } from '../lib/scroll';
 import { motion } from '../lib/motion';
-import { ModuleModel } from '../three/ModuleModel';
+import { ModuleModel, EXTRACT_VECTORS } from '../three/ModuleModel';
 import { Stage } from '../three/Stage';
 import { CameraRig } from '../three/CameraRig';
 import { SensorFX } from '../three/SensorFX';
@@ -25,15 +25,15 @@ const ACCENT = '#ff4d00';
 
 /** Camera beats: hero, manifesto, then one per chapter. Front of device = -z. */
 const BEATS: { cam: [number, number, number]; look: [number, number, number] }[] = [
-  { cam: [-0.3, 0.02, -4.45], look: [0.42, 0.02, 0] },   // hero
-  { cam: [0.55, 0.45, -4.7], look: [0, 0.1, 0] },      // manifesto (recede + dim)
+  { cam: [-0.35, 0.05, -5.8], look: [0.42, 0.0, 0] },    // hero
+  { cam: [0.6, 0.5, -5.7], look: [0, 0.1, 0] },        // manifesto (recede + dim)
   { cam: [-1.35, 1.15, -1.95], look: [0.03, 0.62, -0.55] },  // lidar
   { cam: [0.95, 1.9, -1.4], look: [0.02, 0.92, -0.58] },     // imu
   { cam: [0, 0.32, -3.15], look: [0, 0.0, -0.45] },          // mics
   { cam: [-1.2, -0.7, -1.8], look: [-0.02, -0.42, -0.6] },   // camera
   { cam: [0.9, -1.35, -1.75], look: [-0.02, -0.78, -0.7] },  // tof
   { cam: [-2.3, 0.85, 3.1], look: [0.45, -0.28, 0.55] },     // jetson (rear-left)
-  { cam: [0, 0.5, 4.6], look: [0, 0, 0] },                   // fusion (spin π)
+  { cam: [0, 0.55, 5.4], look: [0, 0, 0] },                  // fusion (spin π)
 ];
 
 export function App() {
@@ -62,38 +62,75 @@ export function App() {
       if (!loaded || reduced) return;
       initScroll();
 
-      // Intro flight into the hero pose.
-      gsap.fromTo(
+      // Intro flight into the hero pose. The scrub timeline kills it on its
+      // first update, or the intro's tail would stomp scrolled camera values.
+      const introCam = gsap.fromTo(
         motion.cam,
-        { x: 0.9, y: 1.7, z: -5.4 },
+        { x: 0.9, y: 1.7, z: -6.8 },
         { ...vec(BEATS[0].cam), duration: 1.9, ease: 'power3.out' },
       );
-      gsap.fromTo(
+      const introLook = gsap.fromTo(
         motion.look,
         { x: 0, y: 0.4, z: 0 },
         { ...vec(BEATS[0].look), duration: 1.9, ease: 'power3.out' },
       );
 
       // Master camera timeline scrubbed across the whole track.
+      // ?qa=1 disables snapping so QA can freeze arbitrary scrub states.
+      const qa = new URLSearchParams(location.search).get('qa') === '1';
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: '#track',
           start: 'top top',
           end: 'bottom bottom',
           scrub: 1,
-          snap: {
-            snapTo: 'labelsDirectional',
-            duration: { min: 0.2, max: 0.55 },
-            delay: 0.12,
-            ease: 'power2.inOut',
+          onUpdate: () => {
+            if (introCam.isActive() || introLook.isActive()) {
+              introCam.progress(1).kill();
+              introLook.progress(1).kill();
+            }
           },
+          snap: qa
+            ? undefined
+            : {
+                snapTo: 'labelsDirectional',
+                duration: { min: 0.2, max: 0.55 },
+                delay: 0.12,
+                ease: 'power2.inOut',
+              },
         },
       });
       tl.addLabel('beat0', 0);
+      // Chapters extract their part by 0.55 along its explode vector, so the
+      // camera must aim at the EXTRACTED position, not the seated one.
+      const EXTRACT_K = 0.55;
+      const chapterTarget = (b: (typeof BEATS)[number], i: number) => {
+        const cam = vec(b.cam);
+        const look = vec(b.look);
+        const anchor = i >= 2 ? CHAPTERS[i - 2]?.anchor : undefined;
+        const ev = anchor && anchor !== 'chassis-upper' ? EXTRACT_VECTORS[anchor] : undefined;
+        if (ev) {
+          cam.x += ev[0] * EXTRACT_K * 0.6;
+          cam.y += ev[1] * EXTRACT_K * 0.6;
+          cam.z += ev[2] * EXTRACT_K * 0.6;
+          look.x += ev[0] * EXTRACT_K * 0.85;
+          look.y += ev[1] * EXTRACT_K * 0.85;
+          look.z += ev[2] * EXTRACT_K * 0.85;
+        }
+        return { cam, look };
+      };
       BEATS.forEach((b, i) => {
         if (i === 0) return;
-        tl.to(motion.cam, { ...vec(b.cam), duration: 0.6, ease: 'power2.inOut' }, i - 0.6);
-        tl.to(motion.look, { ...vec(b.look), duration: 0.6, ease: 'power2.inOut' }, '<');
+        const { cam, look } = chapterTarget(b, i);
+        if (i === 7) {
+          // tof -> jetson crosses to the rear: sweep AROUND the left side
+          // instead of cutting through the module's near field.
+          tl.to(motion.cam, { x: -3.4, y: -0.2, z: 0.7, duration: 0.32, ease: 'power1.in' }, i - 0.62);
+          tl.to(motion.cam, { ...cam, duration: 0.3, ease: 'power1.out' }, i - 0.3);
+        } else {
+          tl.to(motion.cam, { ...cam, duration: 0.6, ease: 'power2.inOut' }, i - 0.6);
+        }
+        tl.to(motion.look, { ...look, duration: 0.6, ease: 'power2.inOut' }, i - 0.6);
         tl.addLabel(`beat${i}`, i);
       });
       // Fusion turntable: the module turns to face you (beat 7 → 8 only).

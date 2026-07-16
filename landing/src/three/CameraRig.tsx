@@ -53,6 +53,11 @@ export function CameraRig() {
       cy + par.current.y * len * 0.18,
       cz + rz * par.current.x * len * 0.25,
     );
+    // Safety orbit: no camera path may enter the module's bounding sphere.
+    const MIN_R = 1.6;
+    if (camera.position.lengthSq() < MIN_R * MIN_R) {
+      camera.position.setLength(MIN_R);
+    }
     camera.lookAt(lx, ly, lz);
 
     // Project live part anchor positions for DOM callouts.

@@ -51,6 +51,16 @@ export const EXPLODE: Record<string, [number, number, number]> = {
   'chassis-lower': [0, -0.15, 0],
 };
 
+/** Solo-extraction escape vectors. Defaults to EXPLODE, overridden where the
+ *  exploded direction would drive a lone part through its neighbours:
+ *  the LiDAR sits directly under the IMU plate (escape = forward), and the
+ *  Jetson must travel far enough to fully clear the rear shell. */
+export const EXTRACT_VECTORS: Record<string, [number, number, number]> = {
+  ...EXPLODE,
+  'lidar-ld19': [0, 0.1, -0.85],
+  jetson: [0, 0, 0.95],
+};
+
 /** Live registry so overlays can project real (spun/exploded) positions.
  *  anchorLocal is the part's bounds center in its own local space — several
  *  CAD meshes ship world-baked geometry with zero node translation, so the
@@ -92,6 +102,7 @@ export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
     obj: THREE.Object3D;
     basePos: THREE.Vector3;
     explodeLocal: THREE.Vector3;
+    extractLocal: THREE.Vector3;
     materials: { mat: THREE.Material & { color?: THREE.Color }; baseColor: THREE.Color }[];
     dim: number; // damped 0..1 (1 = fully present)
   };
@@ -122,10 +133,12 @@ export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
         }
       });
       const ex = EXPLODE[name] ?? [0, 0, 0];
+      const exv = EXTRACT_VECTORS[name] ?? [0, 0, 0];
       map.set(name, {
         obj,
         basePos: obj.position.clone(),
         explodeLocal: new THREE.Vector3(ex[0], ex[1], ex[2]).divideScalar(rootScale),
+        extractLocal: new THREE.Vector3(exv[0], exv[1], exv[2]).divideScalar(rootScale),
         materials,
         dim: 1,
       });
@@ -144,7 +157,7 @@ export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
     [],
   );
 
-  const dimTarget = dimStyle === 'fade' ? 0.14 : 0.3;
+  const dimTarget = dimStyle === 'fade' ? 0.14 : 0.45;
 
   useFrame((state, dt) => {
     // Spin around the cloned scene root — its origin is the world origin.
@@ -160,12 +173,14 @@ export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
         : null;
 
     for (const [name, p] of parts) {
-      // global exploded view + single-part extraction
-      let spread = easeInOut(motion.explode);
+      // global exploded view + single-part extraction (separate vectors:
+      // extraction follows a collision-free escape path)
+      p.obj.position
+        .copy(p.basePos)
+        .addScaledVector(p.explodeLocal, easeInOut(motion.explode));
       if (extractSet && extractSet.includes(name)) {
-        spread += easeInOut(motion.extract);
+        p.obj.position.addScaledVector(p.extractLocal, easeInOut(motion.extract));
       }
-      p.obj.position.copy(p.basePos).addScaledVector(p.explodeLocal, spread);
 
       // focus dimming
       const target = !focusSet || focusSet.includes(name) ? 1 : dimTarget;
