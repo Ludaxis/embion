@@ -5,6 +5,7 @@
     { "source": "/01", "destination": "/", "permanent": false },
     { "source": "/02", "destination": "/v3/", "permanent": false },
     { "source": "/v2", "destination": "/v3/", "permanent": false },
+    { "source": "/v2/", "destination": "/v3/", "permanent": false },
     { "source": "/v2/:path*", "destination": "/v3/", "permanent": false },
     { "source": "/03", "destination": "/v3/", "permanent": false },
     { "source": "/explore", "destination": "/v3/", "permanent": false },
