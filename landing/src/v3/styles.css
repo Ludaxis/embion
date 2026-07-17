@@ -279,3 +279,6 @@ h1 {
   }
   .overview-pill { bottom: auto; top: 76px; }
 }
+
+/* weak machines: static grain, no blend-mode compositing */
+html.perf-low .grain { animation: none; mix-blend-mode: normal; opacity: 0.03; }

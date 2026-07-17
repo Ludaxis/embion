@@ -1,9 +1,9 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Preload, useProgress } from '@react-three/drei';
+import { Canvas, invalidate } from '@react-three/fiber';
+import { Preload, PerformanceMonitor, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
-import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
-import { getGPUTier } from 'detect-gpu';
+import { EffectComposer, Bloom, Vignette, N8AO, SMAA } from '@react-three/postprocessing';
+import { QUALITY, useInitialQuality, demote, promote } from '../three/AdaptiveQuality';
 import { useGSAP } from '@gsap/react';
 import { gsap, ScrollTrigger, initScroll, prefersReducedMotion } from '../lib/scroll';
 import { motion } from '../lib/motion';
@@ -23,6 +23,19 @@ gsap.registerPlugin(useGSAP);
 
 const ACCENT = '#ff4d00';
 
+/** Extraction-adjusted chapter shot (same math the scrub timeline uses). */
+function staticTarget(b: { cam: [number, number, number]; look: [number, number, number] }, i: number) {
+  const cam = vec(b.cam);
+  const look = vec(b.look);
+  const anchor = i >= 2 ? CHAPTERS[i - 2]?.anchor : undefined;
+  const ev = anchor && anchor !== 'chassis-upper' ? EXTRACT_VECTORS[anchor] : undefined;
+  if (ev) {
+    cam.x += ev[0] * 0.33; cam.y += ev[1] * 0.33; cam.z += ev[2] * 0.33;
+    look.x += ev[0] * 0.47; look.y += ev[1] * 0.47; look.z += ev[2] * 0.47;
+  }
+  return { cam, look };
+}
+
 /** Camera beats: hero, manifesto, then one per chapter. Front of device = -z. */
 const BEATS: { cam: [number, number, number]; look: [number, number, number] }[] = [
   { cam: [-0.35, 0.05, -5.8], look: [0.42, 0.0, 0] },    // hero
@@ -38,14 +51,20 @@ const BEATS: { cam: [number, number, number]; look: [number, number, number] }[]
 
 export function App() {
   const [loaded, setLoaded] = useState(false);
-  const [effectsOn, setEffectsOn] = useState(false);
+  const [ctxLost, setCtxLost] = useState(false);
+  const [quality, setQuality] = useInitialQuality();
   const rootRef = useRef<HTMLDivElement>(null);
   const reduced = prefersReducedMotion();
+  const q = QUALITY[quality ?? 'medium'];
 
   useEffect(() => {
-    getGPUTier().then((t) => setEffectsOn((t.tier ?? 0) >= 2 && !t.isMobile));
     if (reduced) document.documentElement.classList.add('reduced');
   }, [reduced]);
+
+  // cheap CSS on weak machines (grain blend-mode compositing is costly)
+  useEffect(() => {
+    document.documentElement.classList.toggle('perf-low', quality === 'low');
+  }, [quality]);
 
   useEffect(() => {
     if (!window.matchMedia('(pointer: fine)').matches) return;
@@ -59,7 +78,34 @@ export function App() {
 
   useGSAP(
     () => {
-      if (!loaded || reduced) return;
+      if (!loaded) return;
+      if (reduced) {
+        // Static mode: no smoothing, no scrub — each chapter instantly
+        // composes its shot so the page still tells the story.
+        gsap.set(motion.cam, vec(BEATS[0].cam));
+        gsap.set(motion.look, vec(BEATS[0].look));
+        invalidate();
+        gsap.utils.toArray<HTMLElement>('.chapter').forEach((section, ci) => {
+          const anchor = section.dataset.anchor!;
+          ScrollTrigger.create({
+            trigger: section,
+            start: 'top 62%',
+            end: 'bottom 42%',
+            onToggle: (self) => {
+              if (!self.isActive) return;
+              motion.focus = anchor;
+              motion.extractName = anchor !== 'chassis-upper' ? anchor : '';
+              motion.extract = anchor !== 'chassis-upper' ? 0.55 : 0;
+              const b = BEATS[ci + 2];
+              const { cam, look } = staticTarget(b, ci + 2);
+              gsap.set(motion.cam, cam);
+              gsap.set(motion.look, look);
+              invalidate();
+            },
+          });
+        });
+        return;
+      }
       initScroll();
 
       // Intro flight into the hero pose. The scrub timeline kills it on its
@@ -258,11 +304,11 @@ export function App() {
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          style={{ opacity: loaded ? 0 : 1 }}
+          style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
         <Canvas
           camera={{ fov: 35, position: [0, 0.05, -4.1], near: 0.1, far: 60 }}
-          dpr={[1, 2]}
+          dpr={q.dpr}
           gl={{
             antialias: true,
             powerPreference: 'high-performance',
@@ -271,18 +317,40 @@ export function App() {
             toneMappingExposure: 1.22,
           }}
           frameloop={reduced ? 'demand' : 'always'}
+          onCreated={({ gl }) => {
+            gl.domElement.addEventListener('webglcontextlost', (e) => {
+              e.preventDefault();
+              setCtxLost(true);
+            });
+          }}
         >
+          {!reduced && (
+            <PerformanceMonitor
+              flipflops={2}
+              onDecline={() => setQuality((cur) => demote(cur ?? 'medium'))}
+              onIncline={() => setQuality((cur) => promote(cur ?? 'medium'))}
+              onFallback={() => setQuality('low')}
+            />
+          )}
           <Suspense fallback={null}>
-            <Stage theme="dark" floor={effectsOn ? 'reflect' : 'none'} />
+            <Stage theme="dark" floor={q.floor ? 'reflect' : 'none'} />
             <ModuleModel theme="dark" dimStyle="darken" />
             <SensorFX accent={ACCENT} />
             <CameraRig />
             <FrameloopGate />
-            {effectsOn && (
-              <EffectComposer multisampling={4}>
+            {q.composer && q.ao && (
+              <EffectComposer multisampling={0}>
                 <N8AO halfRes aoRadius={0.4} intensity={3.2} distanceFalloff={0.5} />
                 <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
                 <Vignette darkness={0.5} offset={0.24} />
+                <SMAA />
+              </EffectComposer>
+            )}
+            {q.composer && !q.ao && (
+              <EffectComposer multisampling={0}>
+                <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
+                <Vignette darkness={0.5} offset={0.24} />
+                <SMAA />
               </EffectComposer>
             )}
             <Preload all />

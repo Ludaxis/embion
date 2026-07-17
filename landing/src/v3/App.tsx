@@ -3,8 +3,9 @@ import { Canvas } from '@react-three/fiber';
 import { Preload, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
-import { getGPUTier } from 'detect-gpu';
+import { EffectComposer, Bloom, Vignette, N8AO, SMAA } from '@react-three/postprocessing';
+import { PerformanceMonitor } from '@react-three/drei';
+import { QUALITY, useInitialQuality, demote, promote } from '../three/AdaptiveQuality';
 import { motion, screenAnchors } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
 import { ModuleModel, EXTRACT_VECTORS } from '../three/ModuleModel';
@@ -117,12 +118,14 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
-  const [effectsOn, setEffectsOn] = useState(false);
+  const [ctxLost, setCtxLost] = useState(false);
+  const [quality, setQuality] = useInitialQuality();
   const reduced = prefersReducedMotion();
+  const q = QUALITY[quality ?? 'medium'];
 
   useEffect(() => {
-    getGPUTier().then((t) => setEffectsOn((t.tier ?? 0) >= 2 && !t.isMobile));
-  }, []);
+    document.documentElement.classList.toggle('perf-low', quality === 'low');
+  }, [quality]);
 
   // pointer parallax (subtle, desktop only)
   useEffect(() => {
@@ -301,11 +304,11 @@ export function App() {
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          style={{ opacity: loaded ? 0 : 1 }}
+          style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
         <Canvas
           camera={{ fov: 35, position: [0, 0.12, -4.5], near: 0.1, far: 60 }}
-          dpr={[1, 2]}
+          dpr={q.dpr}
           gl={{
             antialias: true,
             powerPreference: 'high-performance',
@@ -315,9 +318,23 @@ export function App() {
           }}
           frameloop={reduced ? 'demand' : 'always'}
           onPointerMissed={() => selected && select(null)}
+          onCreated={({ gl }) => {
+            gl.domElement.addEventListener('webglcontextlost', (e) => {
+              e.preventDefault();
+              setCtxLost(true);
+            });
+          }}
         >
+          {!reduced && (
+            <PerformanceMonitor
+              flipflops={2}
+              onDecline={() => setQuality((cur) => demote(cur ?? 'medium'))}
+              onIncline={() => setQuality((cur) => promote(cur ?? 'medium'))}
+              onFallback={() => setQuality('low')}
+            />
+          )}
           <Suspense fallback={null}>
-            <Stage theme="dark" floor={effectsOn ? 'reflect' : 'none'} />
+            <Stage theme="dark" floor={q.floor ? 'reflect' : 'none'} />
             <group
               onPointerMove={(e) => {
                 e.stopPropagation();
@@ -334,11 +351,19 @@ export function App() {
             </group>
             <SensorFX accent={ACCENT} />
             <CameraRig />
-            {effectsOn && (
-              <EffectComposer multisampling={4}>
+            {q.composer && q.ao && (
+              <EffectComposer multisampling={0}>
                 <N8AO halfRes aoRadius={0.4} intensity={3.2} distanceFalloff={0.5} />
                 <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
                 <Vignette darkness={0.5} offset={0.24} />
+                <SMAA />
+              </EffectComposer>
+            )}
+            {q.composer && !q.ao && (
+              <EffectComposer multisampling={0}>
+                <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
+                <Vignette darkness={0.5} offset={0.24} />
+                <SMAA />
               </EffectComposer>
             )}
             <Preload all />

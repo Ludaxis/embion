@@ -418,3 +418,6 @@ html.reduced .beat { height: 110vh; }
 
 .version-switch a { text-decoration: none; }
 .version-switch a.vs-other:hover { color: var(--accent); }
+
+/* weak machines: static grain, no blend-mode compositing */
+html.perf-low .grain { animation: none; mix-blend-mode: normal; opacity: 0.03; }
