@@ -22,6 +22,7 @@ const shot = params.get('shot') ?? 'hero';
 const capture = params.get('capture') === '1';
 const name = params.get('name') ?? `${shot}-${theme}`;
 const noFx = params.get('fx') === '0';
+const modelUrl = params.get('model') ?? undefined; // e.g. /models/module-new.glb
 
 const SHOTS: Record<string, { cam: [number, number, number]; look: [number, number, number]; fov?: number }> = {
   // matches the V1 hero beat
@@ -47,7 +48,7 @@ const parseV3 = (s: string | null): [number, number, number] | null => {
 conf.cam = parseV3(params.get('cam')) ?? conf.cam;
 conf.look = parseV3(params.get('look')) ?? conf.look;
 
-function Capturer({ onReady }: { onReady: () => void }) {
+function Capturer({ onReady, composerRef }: { onReady: () => void; composerRef: { current: unknown } }) {
   const gl = useThree((s) => s.gl);
   const { progress, active } = useProgress();
   const fired = useRef(false);
@@ -57,6 +58,9 @@ function Capturer({ onReady }: { onReady: () => void }) {
     fired.current = true;
     // let a few frames render (env, shadows, transmission settle)
     setTimeout(() => {
+      // expose the postprocessing composer so an external driver can force a
+      // fully-composited render (AO/bloom/vignette) in a hidden/throttled tab.
+      (window as unknown as { __composer: unknown }).__composer = composerRef.current;
       onReady();
       if (!capture) return;
       setTimeout(() => {
@@ -75,6 +79,7 @@ function Capturer({ onReady }: { onReady: () => void }) {
 
 function App() {
   const [ready, setReady] = useState(false);
+  const composerRef = useRef<unknown>(null);
   return (
     <div
       style={{
@@ -99,10 +104,13 @@ function App() {
               : theme === 'dark'
                 ? THREE.AgXToneMapping
                 : THREE.NeutralToneMapping,
-          toneMappingExposure: parseFloat(params.get('exp') ?? (theme === 'dark' ? '1.22' : '1.0')),
+          toneMappingExposure: parseFloat(params.get('exp') ?? (theme === 'dark' ? '1.26' : '1.0')),
         }}
-        onCreated={({ camera, scene }) => {
-          (window as unknown as { __scene: THREE.Scene }).__scene = scene;
+        onCreated={({ camera, scene, gl }) => {
+          const w = window as unknown as { __scene: THREE.Scene; __cam: THREE.Camera; __gl: THREE.WebGLRenderer };
+          w.__scene = scene;
+          w.__cam = camera;
+          w.__gl = gl; // lets an external driver force a render + readback in a hidden tab
           camera.lookAt(new THREE.Vector3(...conf.look));
           if (params.get('bg') !== 'transparent') {
             scene.background = new THREE.Color(theme === 'dark' ? '#0a0a0b' : '#fcfcfa');
@@ -111,15 +119,15 @@ function App() {
       >
         <Suspense fallback={null}>
           <Stage theme={theme} floor={theme === 'dark' && params.get('floor') !== '0' ? 'reflect' : 'none'} bakeFrames={Infinity} />
-          <ModuleModel theme={theme} />
+          <ModuleModel theme={theme} url={modelUrl} />
           {theme === 'dark' && !noFx && (
-            <EffectComposer multisampling={4}>
-              <N8AO aoRadius={0.4} intensity={3.2} distanceFalloff={0.5} />
-              <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
-              <Vignette darkness={0.5} offset={0.24} />
+            <EffectComposer ref={composerRef as never} multisampling={4}>
+              <N8AO aoRadius={0.5} intensity={3.8} distanceFalloff={0.5} />
+              <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
+              <Vignette darkness={0.55} offset={0.22} />
             </EffectComposer>
           )}
-          <Capturer onReady={() => setReady(true)} />
+          <Capturer composerRef={composerRef} onReady={() => setReady(true)} />
         </Suspense>
       </Canvas>
     </div>

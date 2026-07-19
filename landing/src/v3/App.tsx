@@ -314,7 +314,7 @@ export function App() {
             powerPreference: 'high-performance',
             stencil: false,
             toneMapping: THREE.AgXToneMapping,
-            toneMappingExposure: 1.22,
+            toneMappingExposure: 1.26,
           }}
           frameloop={reduced ? 'demand' : 'always'}
           onPointerMissed={() => selected && select(null)}
@@ -353,16 +353,16 @@ export function App() {
             <CameraRig />
             {q.composer && q.ao && (
               <EffectComposer multisampling={0}>
-                <N8AO halfRes aoRadius={0.4} intensity={3.2} distanceFalloff={0.5} />
-                <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
-                <Vignette darkness={0.5} offset={0.24} />
+                <N8AO halfRes aoRadius={0.5} intensity={3.8} distanceFalloff={0.5} />
+                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
+                <Vignette darkness={0.55} offset={0.22} />
                 <SMAA />
               </EffectComposer>
             )}
             {q.composer && !q.ao && (
               <EffectComposer multisampling={0}>
-                <Bloom mipmapBlur luminanceThreshold={1} intensity={0.5} />
-                <Vignette darkness={0.5} offset={0.24} />
+                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
+                <Vignette darkness={0.55} offset={0.22} />
                 <SMAA />
               </EffectComposer>
             )}

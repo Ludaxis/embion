@@ -20,7 +20,7 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
   const scene = useThree((s) => s.scene);
 
   useEffect(() => {
-    scene.environmentIntensity = theme === 'dark' ? 1.15 : 1.1;
+    scene.environmentIntensity = theme === 'dark' ? 1.3 : 1.1;
   }, [scene, theme]);
 
   return (
@@ -31,64 +31,74 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
       <Environment resolution={512} frames={bakeFrames} background={false}>
         {theme === 'dark' ? (
           <>
-            {/* warm key — large overhead-left softbox */}
+            {/* soft top gradient — a slow falloff down the body reads as anodized */}
             <Lightformer
               form="rect"
-              color="#fff9ef"
-              intensity={4.2}
-              position={[-3.5, 5, -2.5]}
-              rotation={[-Math.PI / 2, 0, Math.PI / 8]}
+              color="#fff6ea"
+              intensity={2.6}
+              position={[0, 6, -0.6]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              scale={[10, 8, 1]}
+            />
+            {/* warm key — large soft box, upper front-left */}
+            <Lightformer
+              form="rect"
+              color="#fff2dc"
+              intensity={3.6}
+              position={[-4.2, 4.2, -3.2]}
+              rotation={[-Math.PI / 2.6, -Math.PI / 7, 0]}
               scale={[7, 5, 1]}
             />
-            {/* long cool streak strips — grazing highlights on gloss */}
+            {/* neutral front fill — sensors face -z; keeps front faces off pure black */}
             <Lightformer
               form="rect"
-              color="#dbe6ff"
-              intensity={3.8}
-              position={[-5, 1.3, -0.6]}
-              rotation={[0, Math.PI / 2, 0]}
-              scale={[7, 0.65, 1]}
-            />
-            <Lightformer
-              form="rect"
-              color="#e8eeff"
-              intensity={2.0}
-              position={[5, 2.1, 0.4]}
-              rotation={[0, -Math.PI / 2, 0]}
-              scale={[6, 0.5, 1]}
-            />
-            {/* neutral front fill — sensors face -z */}
-            <Lightformer
-              form="rect"
-              color="#ffffff"
-              intensity={1.25}
-              position={[0, 0.4, -5]}
+              color="#eef2ff"
+              intensity={1.1}
+              position={[0, 0.2, -5.4]}
               rotation={[0, Math.PI, 0]}
-              scale={[6, 3, 1]}
+              scale={[7, 4, 1]}
             />
-            {/* cool ring rim behind */}
+            {/* COOL RIM LEFT — grazing edge highlight that lifts the silhouette off black */}
+            <Lightformer
+              form="rect"
+              color="#cfe0ff"
+              intensity={6}
+              position={[-4.7, 2.2, 3.1]}
+              rotation={[0, -Math.PI * 0.7, 0]}
+              scale={[0.6, 5, 1]}
+            />
+            {/* COOL RIM RIGHT — the brighter of the pair, defines the hero edge */}
+            <Lightformer
+              form="rect"
+              color="#dbe8ff"
+              intensity={7.5}
+              position={[4.7, 2.0, 2.9]}
+              rotation={[0, Math.PI * 0.7, 0]}
+              scale={[0.6, 5.2, 1]}
+            />
+            {/* long cool streak — a moving grazing highlight across the gloss */}
+            <Lightformer
+              form="rect"
+              color="#e6eeff"
+              intensity={3.2}
+              position={[-5, 1.2, -0.4]}
+              rotation={[0, Math.PI / 2, 0]}
+              scale={[7, 0.5, 1]}
+            />
+            {/* cool ring rim behind — a soft halo on the top LiDAR puck */}
             <Lightformer
               form="ring"
               color="#cfe0ff"
-              intensity={3}
-              position={[1.5, 2.5, 4]}
+              intensity={2.4}
+              position={[1.2, 2.6, 4]}
               rotation={[0, Math.PI, 0]}
-              scale={[3.6, 3.6, 1]}
+              scale={[3.4, 3.4, 1]}
             />
-            {/* hard rim strip behind-right — separates edges from the bg */}
+            {/* rear fill so back-facing chapters aren't pure silhouettes */}
             <Lightformer
               form="rect"
-              color="#e6edff"
-              intensity={4.5}
-              position={[4.2, 1.6, 3.2]}
-              rotation={[0, -Math.PI * 0.72, 0]}
-              scale={[0.55, 4.5, 1]}
-            />
-            {/* rear fill so back-facing chapters aren't silhouettes */}
-            <Lightformer
-              form="rect"
-              color="#f2f4ff"
-              intensity={1.7}
+              color="#eef1ff"
+              intensity={1.4}
               position={[0, 1, 5]}
               rotation={[0, Math.PI, 0]}
               scale={[6, 3, 1]}
@@ -143,17 +153,17 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
         <mesh rotation-x={-Math.PI / 2} position={[0, -1.13, 0]}>
           <planeGeometry args={[18, 18]} />
           <MeshReflectorMaterial
-            blur={[380, 90]}
+            blur={[300, 110]}
             resolution={1024}
             mixBlur={1}
-            mixStrength={22}
-            roughness={0.92}
-            depthScale={1.1}
-            minDepthThreshold={0.4}
+            mixStrength={16}
+            roughness={0.9}
+            depthScale={1}
+            minDepthThreshold={0.35}
             maxDepthThreshold={1.4}
-            color="#040405"
-            metalness={0.45}
-            mirror={0.55}
+            color="#050506"
+            metalness={0.5}
+            mirror={0.62}
           />
         </mesh>
       )}
@@ -161,10 +171,10 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
       <ContactShadows
         frames={bakeFrames}
         position={[0, theme === 'dark' ? -1.115 : -1.12, 0]}
-        opacity={theme === 'dark' ? 0.55 : 0.34}
-        scale={7}
-        blur={2.6}
-        far={2.4}
+        opacity={theme === 'dark' ? 0.72 : 0.34}
+        scale={6.5}
+        blur={2.2}
+        far={2.2}
         resolution={512}
         color="#000000"
       />

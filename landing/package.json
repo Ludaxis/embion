@@ -26,10 +26,15 @@
     "three": "^0.176.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.4.1",
+    "@gltf-transform/extensions": "^4.4.1",
+    "@gltf-transform/functions": "^4.4.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/three": "^0.176.0",
     "@vitejs/plugin-react": "^4.4.1",
+    "meshoptimizer": "^1.2.0",
+    "sharp": "^0.35.3",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"
   }

@@ -74,10 +74,12 @@ type Props = {
   theme: 'dark' | 'light';
   /** darken = cinematic dim; fade = blueprint ghosting */
   dimStyle?: 'darken' | 'fade';
+  /** override the GLB URL (render rig comparison: ?model=…) */
+  url?: string;
 };
 
-export function ModuleModel({ theme, dimStyle = 'darken' }: Props) {
-  const { scene } = useGLTF(MODEL_URL);
+export function ModuleModel({ theme, dimStyle = 'darken', url = MODEL_URL }: Props) {
+  const { scene } = useGLTF(url);
   const rootRef = useRef<THREE.Group>(null);
 
   // Clone the scene graph + materials once per mount so theme/dim mutations
@@ -273,69 +275,76 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
   }
 
   if (name.startsWith('3D Print Filament')) {
-    // main printed chassis — blue-black with a soft clearcoat sheen
+    // Main printed chassis. Graded as dark anodized metal, not raw FDM plastic:
+    // deep near-black + low roughness + a real clearcoat so the cool rim lights
+    // land as crisp specular streaks — the core "product on black" read.
     out = toPhysical(mat, {
-      roughness: 0.46,
-      metalness: 0.06,
-      clearcoat: 0.32,
-      clearcoatRoughness: 0.42,
+      roughness: 0.4,
+      metalness: 0.14,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.3,
     });
-    out.color = new THREE.Color(dark ? '#141518' : '#17181c');
+    out.color = new THREE.Color('#0f1015');
   } else if (name === 'Material.023') {
     // LiDAR puck body — glossy sensor housing
     out = toPhysical(mat, {
-      roughness: 0.3,
-      metalness: 0.1,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.22,
+      roughness: 0.26,
+      metalness: 0.12,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.18,
     });
-    out.color = new THREE.Color('#0b0c10');
+    out.color = new THREE.Color('#0a0b0f');
   } else if (name === 'Material.024') {
-    // LiDAR upper cap — deep gloss black (matches the real LD19 window band)
+    // LiDAR upper cap — piano-black gloss (the real LD19 window band)
     out = toPhysical(mat, {
-      roughness: 0.12,
-      metalness: 0.25,
+      roughness: 0.08,
+      metalness: 0.3,
       clearcoat: 1,
-      clearcoatRoughness: 0.1,
+      clearcoatRoughness: 0.06,
     });
-    out.color = new THREE.Color('#08080c');
+    out.color = new THREE.Color('#060609');
   } else if (name === 'Black scratched plastic') {
     // AR0234 housing — crushed-black maps read as a silhouette; satin finish
     out = toPhysical(mat, {
-      roughness: 0.38,
-      metalness: 0.18,
-      clearcoat: 0.45,
-      clearcoatRoughness: 0.3,
+      roughness: 0.34,
+      metalness: 0.2,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.26,
     });
     out.map = null;
     out.roughnessMap = null;
     out.metalnessMap = null;
-    out.color = new THREE.Color('#212226');
+    out.color = new THREE.Color('#1e1f24');
   } else if (name === 'Glass dark') {
-    // lens element — deep glossy glass (real transmission renders black
-    // over a transparent canvas)
+    // Camera lens element — crisp glossy optic (real transmission renders black
+    // over a transparent canvas, so fake it with deep gloss + strong clearcoat).
     out = toPhysical(mat, {
-      roughness: 0.05,
-      metalness: 0.7,
+      roughness: 0.03,
+      metalness: 0.8,
       clearcoat: 1,
-      clearcoatRoughness: 0.04,
+      clearcoatRoughness: 0.03,
     });
-    out.color = new THREE.Color('#06060a');
+    out.color = new THREE.Color('#04040a');
     out.transparent = false;
     out.opacity = 1;
   } else if (name === 'AR3DMat PBR Black Plastic') {
-    // rear housing — keep its normal map, add subtle coat
+    // rear housing — keep its normal map, add a subtle coat
     out = toPhysical(mat, {
-      clearcoat: 0.25,
-      clearcoatRoughness: 0.5,
-      roughness: 0.5,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.45,
+      roughness: 0.46,
     });
-    out.color = new THREE.Color('#141519');
+    out.color = new THREE.Color('#121318');
   } else if (name === 'Black leather') {
-    // Jetson dev-kit shell — textured; lift its response a touch
-    mat.roughness = Math.min(mat.roughness, 0.62);
+    // Jetson dev-kit shell — textured; keep a satin response
+    mat.roughness = Math.min(mat.roughness, 0.58);
+  } else if (name === 'Material.025') {
+    // IMU board — dark satin
+    mat.roughness = 0.5;
+    mat.metalness = 0.2;
   }
 
-  out.envMapIntensity = dark ? 1.35 : 1.1;
+  // Stronger env reflections carry the studio rim/key on the gloss surfaces.
+  out.envMapIntensity = dark ? 1.5 : 1.1;
   return out;
 }

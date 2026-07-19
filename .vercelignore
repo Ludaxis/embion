@@ -1,5 +1,7 @@
 # never upload to Vercel builds
 path_planner_module.glb
+path_planner_module/
+path_planner_module.rar
 node_modules
 dist
 landing/renders
