@@ -1,22 +1,15 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Preload, useProgress } from '@react-three/drei';
-import * as THREE from 'three';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Vector3, Quaternion, type Object3D } from 'three';
 import gsap from 'gsap';
-import { EffectComposer, Bloom, Vignette, N8AO, SMAA } from '@react-three/postprocessing';
-import { PerformanceMonitor } from '@react-three/drei';
-import { QUALITY, useInitialQuality, demote, promote } from '../three/AdaptiveQuality';
-import { motion, screenAnchors } from '../lib/motion';
+import { motion, screenAnchors, requestRender } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
-import { ModuleModel, EXTRACT_VECTORS } from '../three/ModuleModel';
-import { Stage } from '../three/Stage';
-import { CameraRig } from '../three/CameraRig';
-import { SensorFX } from '../three/SensorFX';
+import { EXTRACT_VECTORS } from '../three/parts';
 import {
   BRAND, PRODUCT_CODE, CHAPTERS, BUILD_LOG_URL, CONTACT_MAILTO,
 } from '../content/product';
 
-const ACCENT = '#ff4d00';
+// 3D layer lazy-loaded so first paint = DOM + poster off a tiny bundle.
+const Scene = lazy(() => import('./Scene'));
 
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
@@ -105,8 +98,8 @@ const NODE_TO_PART: Record<string, string> = {
 const partById = (id: string | null) => PARTS.find((p) => p.id === id) ?? null;
 const chapterFor = (p: ExplorePart) => CHAPTERS.find((c) => c.id === p.chapter)!;
 
-function resolvePartFromObject(obj: THREE.Object3D | null): string | null {
-  let o: THREE.Object3D | null = obj;
+function resolvePartFromObject(obj: Object3D | null): string | null {
+  let o: Object3D | null = obj;
   while (o) {
     if (o.name && NODE_TO_PART[o.name]) return NODE_TO_PART[o.name];
     o = o.parent;
@@ -119,13 +112,7 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [ctxLost, setCtxLost] = useState(false);
-  const [quality, setQuality] = useInitialQuality();
   const reduced = prefersReducedMotion();
-  const q = QUALITY[quality ?? 'medium'];
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('perf-low', quality === 'low');
-  }, [quality]);
 
   // pointer parallax (subtle, desktop only)
   useEffect(() => {
@@ -149,6 +136,7 @@ export function App() {
       motion.cam.x = OVERVIEW.cam[0];
       motion.cam.y = OVERVIEW.cam[1];
       motion.cam.z = OVERVIEW.cam[2];
+      requestRender(); // demand-mode: force the static overview frame
       return;
     }
     gsap.fromTo(
@@ -167,14 +155,9 @@ export function App() {
       if (flyRef.current) gsap.killTweensOf(flyRef.current.proxy);
       const d = reduced ? 0 : 1.25;
 
-      gsap.to(motion.look, {
-        x: pose.look[0], y: pose.look[1], z: pose.look[2],
-        duration: d, ease: 'power3.inOut',
-      });
-
-      const from = new THREE.Vector3(motion.cam.x, motion.cam.y, motion.cam.z);
-      const to = new THREE.Vector3(pose.cam[0], pose.cam[1], pose.cam[2]);
-      const pivot = new THREE.Vector3(
+      const from = new Vector3(motion.cam.x, motion.cam.y, motion.cam.z);
+      const to = new Vector3(pose.cam[0], pose.cam[1], pose.cam[2]);
+      const pivot = new Vector3(
         (motion.look.x + pose.look[0]) / 2,
         (motion.look.y + pose.look[1]) / 2,
         (motion.look.z + pose.look[2]) / 2,
@@ -182,38 +165,50 @@ export function App() {
       const a = from.clone().sub(pivot);
       const b = to.clone().sub(pivot);
       const angle = a.angleTo(b);
+      const wide = !reduced && angle >= 0.9;
+      // Aim and position settle on the SAME frame (was 1.25 vs 1.5 → the shot
+      // "arrived twice"); the wide arc gets a touch longer for the extra travel.
+      const dur = wide ? d * 1.2 : d;
 
-      if (reduced || angle < 0.9) {
+      gsap.to(motion.look, {
+        x: pose.look[0], y: pose.look[1], z: pose.look[2],
+        duration: dur, ease: 'power3.inOut',
+      });
+
+      if (!wide) {
         gsap.to(motion.cam, {
           x: to.x, y: to.y, z: to.z,
-          duration: d, ease: 'power3.inOut',
+          duration: dur, ease: 'power3.inOut',
         });
         return;
       }
 
-      // Wide swing: quadratic-bezier arc through an outward control point so
-      // the camera orbits AROUND the module instead of diving through it.
-      const mid = a.clone().add(b).multiplyScalar(0.5);
-      if (mid.length() < 0.4) mid.set(-a.z, Math.max(a.y, b.y), a.x); // near-opposite sides
-      mid.setLength(Math.max(a.length(), b.length()) * 1.18).add(pivot);
+      // Wide swing: a TRUE constant-radius orbit around the module — slerp the
+      // pivot-relative offset direction and lerp the radius separately. (The old
+      // quadratic bezier pushed the control point to 1.18× radius, so the camera
+      // bulged out then back in and the subject visibly shrank mid-move.)
+      const lenA = a.length();
+      const lenB = b.length();
+      const dirA = a.clone().normalize();
+      const dirB = b.clone().normalize();
+      const axis = new Vector3().crossVectors(dirA, dirB);
+      if (axis.lengthSq() < 1e-6) axis.set(0, 1, 0);
+      else axis.normalize();
+      const q = new Quaternion();
+      const dir = new Vector3();
       const proxy = { t: 0 };
       flyRef.current = { proxy };
-      const p = new THREE.Vector3();
       gsap.to(proxy, {
         t: 1,
-        duration: d * 1.2,
+        duration: dur,
         ease: 'power2.inOut',
         onUpdate: () => {
-          const t = proxy.t;
-          const it = 1 - t;
-          p.set(
-            it * it * from.x + 2 * it * t * mid.x + t * t * to.x,
-            it * it * from.y + 2 * it * t * mid.y + t * t * to.y,
-            it * it * from.z + 2 * it * t * mid.z + t * t * to.z,
-          );
-          motion.cam.x = p.x;
-          motion.cam.y = p.y;
-          motion.cam.z = p.z;
+          q.setFromAxisAngle(axis, angle * proxy.t);
+          dir.copy(dirA).applyQuaternion(q);
+          const r = lenA + (lenB - lenA) * proxy.t;
+          motion.cam.x = pivot.x + dir.x * r;
+          motion.cam.y = pivot.y + dir.y * r;
+          motion.cam.z = pivot.z + dir.z * r;
         },
       });
     },
@@ -240,7 +235,9 @@ export function App() {
         }
         tl.to(
           motion,
-          { extract: 1, duration: reduced ? 0 : 1.2, ease: 'back.out(1.15)' },
+          // Decisive, non-springy: a rigid machined part shouldn't bounce like a
+          // UI toast. (was back.out(1.15) — the overshoot read toy-like.)
+          { extract: 1, duration: reduced ? 0 : 1.1, ease: 'power3.out' },
           switching ? '>' : 0.3,
         );
         flyTo(extractedPose(part));
@@ -278,8 +275,6 @@ export function App() {
       className={`explorer ${selected ? 'has-selection' : ''} ${hovered ? 'has-hover' : ''}`}
       data-hovered={hovered ?? ''}
     >
-      <Preloader onDone={() => setLoaded(true)} />
-
       <header className="site-header">
         <a className="brand" href="/v3/">
           {BRAND}<span className="brand-dot">·</span><span className="brand-code">{PRODUCT_CODE}</span>
@@ -306,69 +301,19 @@ export function App() {
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
-        <Canvas
-          camera={{ fov: 35, position: [0, 0.12, -4.5], near: 0.1, far: 60 }}
-          dpr={q.dpr}
-          gl={{
-            antialias: true,
-            powerPreference: 'high-performance',
-            stencil: false,
-            toneMapping: THREE.AgXToneMapping,
-            toneMappingExposure: 1.26,
-          }}
-          frameloop={reduced ? 'demand' : 'always'}
-          onPointerMissed={() => selected && select(null)}
-          onCreated={({ gl }) => {
-            gl.domElement.addEventListener('webglcontextlost', (e) => {
-              e.preventDefault();
-              setCtxLost(true);
-            });
-          }}
-        >
-          {!reduced && (
-            <PerformanceMonitor
-              flipflops={2}
-              onDecline={() => setQuality((cur) => demote(cur ?? 'medium'))}
-              onIncline={() => setQuality((cur) => promote(cur ?? 'medium'))}
-              onFallback={() => setQuality('low')}
-            />
-          )}
-          <Suspense fallback={null}>
-            <Stage theme="dark" floor={q.floor ? 'reflect' : 'none'} />
-            <group
-              onPointerMove={(e) => {
-                e.stopPropagation();
-                setHovered(resolvePartFromObject(e.object));
-              }}
-              onPointerOut={() => setHovered(null)}
-              onClick={(e) => {
-                e.stopPropagation();
-                const id = resolvePartFromObject(e.object);
-                if (id) select(id);
-              }}
-            >
-              <ModuleModel theme="dark" dimStyle="darken" />
-            </group>
-            <SensorFX accent={ACCENT} />
-            <CameraRig />
-            {q.composer && q.ao && (
-              <EffectComposer multisampling={0}>
-                <N8AO halfRes aoRadius={0.5} intensity={3.8} distanceFalloff={0.5} />
-                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
-                <Vignette darkness={0.55} offset={0.22} />
-                <SMAA />
-              </EffectComposer>
-            )}
-            {q.composer && !q.ao && (
-              <EffectComposer multisampling={0}>
-                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
-                <Vignette darkness={0.55} offset={0.22} />
-                <SMAA />
-              </EffectComposer>
-            )}
-            <Preload all />
-          </Suspense>
-        </Canvas>
+        <Suspense fallback={null}>
+          <Scene
+            reduced={reduced}
+            onLoaded={() => setLoaded(true)}
+            onCtxLost={() => setCtxLost(true)}
+            onPointerMissed={() => selected && select(null)}
+            onHoverObject={(obj) => setHovered(resolvePartFromObject(obj))}
+            onClickObject={(obj) => {
+              const id = resolvePartFromObject(obj);
+              if (id) select(id);
+            }}
+          />
+        </Suspense>
       </div>
 
       <div className="grain" aria-hidden="true" />
@@ -436,27 +381,62 @@ function Callouts({
   const labelRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const lineRefs = useRef<Record<string, SVGLineElement | null>>({});
   const dotRefs = useRef<Record<string, SVGCircleElement | null>>({});
+  const edgeRefs = useRef<Record<string, { x1: number; y1: number }>>({});
+  const opRefs = useRef<Record<string, number>>({});
+  const lastT = useRef(0);
+
+  // Label rail positions are static except on resize/hover, so measure the
+  // leader-line start points on layout change — not every frame (was a
+  // getBoundingClientRect per part per frame = 6 forced layouts/frame).
+  useEffect(() => {
+    const measure = () => {
+      for (const part of PARTS) {
+        const label = labelRefs.current[part.id];
+        if (!label) continue;
+        const rect = label.getBoundingClientRect();
+        edgeRefs.current[part.id] = {
+          x1: part.side === 'left' ? rect.right + 10 : rect.left - 10,
+          y1: rect.top + rect.height / 2,
+        };
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    window.addEventListener('resize', measure);
+    // remeasure once fonts settle so the edge points aren't off by the FOUT
+    document.fonts?.ready.then(measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [hovered]);
 
   useEffect(() => {
     const tick = () => {
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - (lastT.current || now)) / 1000);
+      lastT.current = now;
       for (const part of PARTS) {
-        const label = labelRefs.current[part.id];
         const line = lineRefs.current[part.id];
         const dot = dotRefs.current[part.id];
         const anchor = screenAnchors[part.labelAnchor];
-        if (!label || !line || !dot || !anchor) continue;
-        const rect = label.getBoundingClientRect();
-        const x1 = part.side === 'left' ? rect.right + 10 : rect.left - 10;
-        const y1 = rect.top + rect.height / 2;
-        const visible = anchor.visible ? 1 : 0;
-        line.setAttribute('x1', String(x1));
-        line.setAttribute('y1', String(y1));
+        const edge = edgeRefs.current[part.id];
+        if (!line || !dot || !anchor || !edge) continue;
+        // Damped fade, not a binary opacity pop, when a part rotates behind the
+        // module. Time-based so the feel is identical at 60 and 120 Hz.
+        const target = anchor.visible ? 1 : 0;
+        const cur = opRefs.current[part.id] ?? 0;
+        const op = cur + (target - cur) * (1 - Math.exp(-dt * 11));
+        opRefs.current[part.id] = op;
+        line.setAttribute('x1', String(edge.x1));
+        line.setAttribute('y1', String(edge.y1));
         line.setAttribute('x2', String(anchor.x));
         line.setAttribute('y2', String(anchor.y));
-        line.style.opacity = String(visible);
+        line.style.opacity = op.toFixed(3);
         dot.setAttribute('cx', String(anchor.x));
         dot.setAttribute('cy', String(anchor.y));
-        dot.style.opacity = String(visible);
+        dot.style.opacity = op.toFixed(3);
       }
     };
     gsap.ticker.add(tick);
@@ -492,25 +472,3 @@ function Callouts({
   );
 }
 
-function Preloader({ onDone }: { onDone: () => void }) {
-  const { progress, active } = useProgress();
-  const [gone, setGone] = useState(false);
-  const doneRef = useRef(false);
-
-  useEffect(() => {
-    if (!doneRef.current && progress >= 100 && !active) {
-      doneRef.current = true;
-      onDone();
-      const t = setTimeout(() => setGone(true), 550);
-      return () => clearTimeout(t);
-    }
-  }, [progress, active, onDone]);
-
-  if (gone) return null;
-  return (
-    <div className={`preloader ${doneRef.current ? 'preloader-out' : ''}`}>
-      <div className="preloader-brand">{BRAND}</div>
-      <div className="preloader-value">{Math.round(progress)}</div>
-    </div>
-  );
-}

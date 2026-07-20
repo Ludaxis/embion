@@ -15,14 +15,26 @@ export const QUALITY = {
  *  tier 3 (discrete/Apple silicon) → high, tier 2 → medium, else → low.
  *  `?perf=low|medium|high` forces a level for debugging. */
 export function useInitialQuality(): [Quality | null, Dispatch<SetStateAction<Quality | null>>] {
-  const [quality, setQuality] = useState<Quality | null>(null);
+  // Seed SYNCHRONOUSLY from cheap signals so a phone doesn't render its most
+  // expensive frames (medium dpr + full composer) during the async getGPUTier()
+  // probe — the heaviest frames used to land exactly at load when the main
+  // thread is already saturated. Start low on likely-weak devices, then let
+  // getGPUTier promote if the real GPU turns out strong.
+  const [quality, setQuality] = useState<Quality | null>(() => {
+    if (typeof location === 'undefined') return 'low';
+    const forced = new URLSearchParams(location.search).get('perf') as Quality | null;
+    if (forced && forced in QUALITY) return forced;
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    const weak =
+      (nav.deviceMemory != null && nav.deviceMemory <= 4) ||
+      (nav.hardwareConcurrency != null && nav.hardwareConcurrency <= 4);
+    return coarse || weak ? 'low' : 'medium';
+  });
 
   useEffect(() => {
-    const forced = new URLSearchParams(location.search).get('perf') as Quality | null;
-    if (forced && forced in QUALITY) {
-      setQuality(forced);
-      return;
-    }
+    const forced = new URLSearchParams(location.search).get('perf');
+    if (forced && forced in QUALITY) return; // honour the seeded override
     let alive = true;
     getGPUTier()
       .then((t) => {
@@ -32,7 +44,7 @@ export function useInitialQuality(): [Quality | null, Dispatch<SetStateAction<Qu
         setQuality(q);
         console.info(`[embion] gpu tier ${tier}${t.isMobile ? ' (mobile)' : ''} → quality: ${q}`);
       })
-      .catch(() => alive && setQuality('medium'));
+      .catch(() => alive && setQuality((cur) => cur ?? 'medium'));
     return () => {
       alive = false;
     };

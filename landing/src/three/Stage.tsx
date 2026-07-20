@@ -35,19 +35,20 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
             <Lightformer
               form="rect"
               color="#fff6ea"
-              intensity={2.6}
+              intensity={3}
               position={[0, 6, -0.6]}
               rotation={[-Math.PI / 2, 0, 0]}
               scale={[10, 8, 1]}
             />
-            {/* warm key — large soft box, upper front-left */}
+            {/* warm key — large soft box, upper front-left. Leads the scene so the
+                body gets a sculpted key→fill gradient (not just lit edges). */}
             <Lightformer
               form="rect"
               color="#fff2dc"
-              intensity={3.6}
+              intensity={4.8}
               position={[-4.2, 4.2, -3.2]}
               rotation={[-Math.PI / 2.6, -Math.PI / 7, 0]}
-              scale={[7, 5, 1]}
+              scale={[8, 5.5, 1]}
             />
             {/* neutral front fill — sensors face -z; keeps front faces off pure black */}
             <Lightformer
@@ -58,11 +59,12 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
               rotation={[0, Math.PI, 0]}
               scale={[7, 4, 1]}
             />
-            {/* COOL RIM LEFT — grazing edge highlight that lifts the silhouette off black */}
+            {/* COOL RIM LEFT — grazing edge accent that lifts the silhouette off
+                black. Kept below the key so it reads as an accent, not the light. */}
             <Lightformer
               form="rect"
               color="#cfe0ff"
-              intensity={6}
+              intensity={4.2}
               position={[-4.7, 2.2, 3.1]}
               rotation={[0, -Math.PI * 0.7, 0]}
               scale={[0.6, 5, 1]}
@@ -71,7 +73,7 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
             <Lightformer
               form="rect"
               color="#dbe8ff"
-              intensity={7.5}
+              intensity={5.2}
               position={[4.7, 2.0, 2.9]}
               rotation={[0, Math.PI * 0.7, 0]}
               scale={[0.6, 5.2, 1]}

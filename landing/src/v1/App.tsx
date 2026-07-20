@@ -1,23 +1,18 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
-import { Canvas, invalidate } from '@react-three/fiber';
-import { Preload, PerformanceMonitor, useProgress } from '@react-three/drei';
-import * as THREE from 'three';
-import { EffectComposer, Bloom, Vignette, N8AO, SMAA } from '@react-three/postprocessing';
-import { QUALITY, useInitialQuality, demote, promote } from '../three/AdaptiveQuality';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap, ScrollTrigger, initScroll, prefersReducedMotion } from '../lib/scroll';
-import { motion } from '../lib/motion';
-import { ModuleModel, EXTRACT_VECTORS } from '../three/ModuleModel';
-import { Stage } from '../three/Stage';
-import { CameraRig } from '../three/CameraRig';
-import { SensorFX } from '../three/SensorFX';
-import { FrameloopGate } from './FrameloopGate';
+import { motion, requestRender } from '../lib/motion';
+import { EXTRACT_VECTORS } from '../three/parts';
 import { Callouts } from './Callouts';
 import { AfterTrack } from './Sections';
 import {
   BRAND, PRODUCT_CODE, PRODUCT_NAME, HERO, PHILOSOPHY, STATS, CHAPTERS,
   BUILD_LOG_URL, CONTACT_MAILTO,
 } from '../content/product';
+
+// The whole 3D layer is lazy so first paint = hero DOM + poster off a tiny
+// bundle; the ~three/drei/postprocessing chunk streams in after.
+const Scene = lazy(() => import('./Scene'));
 
 gsap.registerPlugin(useGSAP);
 
@@ -52,19 +47,12 @@ const BEATS: { cam: [number, number, number]; look: [number, number, number] }[]
 export function App() {
   const [loaded, setLoaded] = useState(false);
   const [ctxLost, setCtxLost] = useState(false);
-  const [quality, setQuality] = useInitialQuality();
   const rootRef = useRef<HTMLDivElement>(null);
   const reduced = prefersReducedMotion();
-  const q = QUALITY[quality ?? 'medium'];
 
   useEffect(() => {
     if (reduced) document.documentElement.classList.add('reduced');
   }, [reduced]);
-
-  // cheap CSS on weak machines (grain blend-mode compositing is costly)
-  useEffect(() => {
-    document.documentElement.classList.toggle('perf-low', quality === 'low');
-  }, [quality]);
 
   useEffect(() => {
     if (!window.matchMedia('(pointer: fine)').matches) return;
@@ -84,7 +72,7 @@ export function App() {
         // composes its shot so the page still tells the story.
         gsap.set(motion.cam, vec(BEATS[0].cam));
         gsap.set(motion.look, vec(BEATS[0].look));
-        invalidate();
+        requestRender();
         gsap.utils.toArray<HTMLElement>('.chapter').forEach((section, ci) => {
           const anchor = section.dataset.anchor!;
           ScrollTrigger.create({
@@ -100,7 +88,7 @@ export function App() {
               const { cam, look } = staticTarget(b, ci + 2);
               gsap.set(motion.cam, cam);
               gsap.set(motion.look, look);
-              invalidate();
+              requestRender();
             },
           });
         });
@@ -129,19 +117,27 @@ export function App() {
           trigger: '#track',
           start: 'top top',
           end: 'bottom bottom',
-          scrub: 1,
-          onUpdate: () => {
-            if (introCam.isActive() || introLook.isActive()) {
-              introCam.progress(1).kill();
-              introLook.progress(1).kill();
+          // Lighter than the old scrub:1 so the camera catch-up (already smoothed
+          // once by Lenis lerp:0.11) doesn't compound into elastic latency.
+          scrub: 0.6,
+          onUpdate: (self) => {
+            // On the first REAL scroll, hand the intro off to the scrub by simply
+            // killing it (leaving the camera where it is) rather than force-
+            // completing to progress(1), which teleported the hero pose in one
+            // frame. Gated on progress so a load-time refresh() can't nuke it.
+            if (self.progress > 0.0002 && (introCam.isActive() || introLook.isActive())) {
+              introCam.kill();
+              introLook.kill();
             }
           },
           snap: qa
             ? undefined
             : {
                 snapTo: 'labelsDirectional',
-                duration: { min: 0.2, max: 0.55 },
-                delay: 0.12,
+                // Later + shorter so the snap settles AFTER the scrub catch-up
+                // instead of fighting it (the old delay:0.12 yanked mid-read).
+                duration: { min: 0.2, max: 0.4 },
+                delay: 0.3,
                 ease: 'power2.inOut',
               },
         },
@@ -231,6 +227,7 @@ export function App() {
       });
 
       // Manifesto reveal + stat count-up.
+      let statsCounted = false;
       ScrollTrigger.create({
         trigger: '.beat-manifesto',
         start: 'top 60%',
@@ -242,6 +239,8 @@ export function App() {
           else if (motion.focus === '__dim__') motion.focus = '';
         },
         onEnter: () => {
+          if (statsCounted) return; // count once, not on every scroll re-entry
+          statsCounted = true;
           gsap.utils.toArray<HTMLElement>('.stat-value').forEach((el) => {
             const target = parseFloat(el.dataset.value!);
             const obj = { v: 0 };
@@ -280,7 +279,6 @@ export function App() {
 
   return (
     <div ref={rootRef}>
-      <Preloader onDone={() => setLoaded(true)} />
       <a className="skip-link" href="#after-track">Skip 3D tour</a>
 
       <header className="site-header">
@@ -306,57 +304,13 @@ export function App() {
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
-        <Canvas
-          camera={{ fov: 35, position: [0, 0.05, -4.1], near: 0.1, far: 60 }}
-          dpr={q.dpr}
-          gl={{
-            antialias: true,
-            powerPreference: 'high-performance',
-            stencil: false,
-            toneMapping: THREE.AgXToneMapping,
-            toneMappingExposure: 1.26,
-          }}
-          frameloop={reduced ? 'demand' : 'always'}
-          onCreated={({ gl }) => {
-            gl.domElement.addEventListener('webglcontextlost', (e) => {
-              e.preventDefault();
-              setCtxLost(true);
-            });
-          }}
-        >
-          {!reduced && (
-            <PerformanceMonitor
-              flipflops={2}
-              onDecline={() => setQuality((cur) => demote(cur ?? 'medium'))}
-              onIncline={() => setQuality((cur) => promote(cur ?? 'medium'))}
-              onFallback={() => setQuality('low')}
-            />
-          )}
-          <Suspense fallback={null}>
-            <Stage theme="dark" floor={q.floor ? 'reflect' : 'none'} />
-            <ModuleModel theme="dark" dimStyle="darken" />
-            <SensorFX accent={ACCENT} />
-            <CameraRig />
-            <FrameloopGate />
-            {q.composer && q.ao && (
-              <EffectComposer multisampling={0}>
-                <N8AO halfRes aoRadius={0.5} intensity={3.8} distanceFalloff={0.5} />
-                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
-                <Vignette darkness={0.55} offset={0.22} />
-                <SMAA />
-              </EffectComposer>
-            )}
-            {q.composer && !q.ao && (
-              <EffectComposer multisampling={0}>
-                <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
-                <Vignette darkness={0.55} offset={0.22} />
-                <SMAA />
-              </EffectComposer>
-            )}
-            <Preload all />
-          </Suspense>
-        </Canvas>
-        <div className="grain" />
+        <Suspense fallback={null}>
+          <Scene
+            reduced={reduced}
+            onLoaded={() => setLoaded(true)}
+            onCtxLost={() => setCtxLost(true)}
+          />
+        </Suspense>
       </div>
 
       <Callouts />
@@ -428,30 +382,4 @@ export function App() {
 
 function vec(a: [number, number, number]) {
   return { x: a[0], y: a[1], z: a[2] };
-}
-
-function Preloader({ onDone }: { onDone: () => void }) {
-  const { progress, active } = useProgress();
-  const [gone, setGone] = useState(false);
-  const doneRef = useRef(false);
-
-  useEffect(() => {
-    if (!doneRef.current && progress >= 100 && !active) {
-      doneRef.current = true;
-      onDone();
-      const t = setTimeout(() => setGone(true), 650);
-      return () => clearTimeout(t);
-    }
-  }, [progress, active, onDone]);
-
-  if (gone) return null;
-  return (
-    <div className={`preloader ${doneRef.current ? 'preloader-out' : ''}`}>
-      <div className="preloader-brand">EMBION</div>
-      <div className="preloader-value">{Math.round(progress)}</div>
-      <div className="preloader-bar">
-        <div className="preloader-fill" style={{ transform: `scaleX(${progress / 100})` }} />
-      </div>
-    </div>
-  );
 }

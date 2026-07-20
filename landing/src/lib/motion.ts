@@ -37,3 +37,15 @@ export const screenAnchors: Record<
 export function markDirty() {
   motion.dirty = true;
 }
+
+// Indirection so the DOM/scroll layer can request a demand-mode frame (reduced
+// motion) without importing @react-three/fiber — which would pull the whole 3D
+// bundle into the main chunk and defeat lazy-loading the Canvas. The 3D layer
+// registers R3F's invalidate() here once it mounts.
+let renderFn: () => void = () => {};
+export function setRequestRender(fn: () => void) {
+  renderFn = fn;
+}
+export function requestRender() {
+  renderFn();
+}

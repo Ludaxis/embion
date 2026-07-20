@@ -20,14 +20,20 @@ export function Callouts() {
     const dot = dotRef.current!;
     const halo = haloRef.current!;
     let opacity = 0;
+    let last = 0;
 
     const tick = () => {
+      // time-based fade so the feel is identical at 60 and 120 Hz (was a fixed
+      // 0.12/frame, which faded twice as fast on a 120 Hz display).
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - (last || now)) / 1000);
+      last = now;
       const section = document.querySelector<HTMLElement>('.chapter.active');
       const anchorName = section?.dataset.anchor;
       const anchor = anchorName ? screenAnchors[anchorName] : undefined;
       const card = section?.querySelector<HTMLElement>('.chapter-card');
       const targetOpacity = section && anchor?.visible && card ? 1 : 0;
-      opacity += (targetOpacity - opacity) * 0.12;
+      opacity += (targetOpacity - opacity) * (1 - Math.exp(-dt * 8));
       svg.style.opacity = String(opacity);
       if (opacity < 0.02 || !card || !anchor) return;
 
