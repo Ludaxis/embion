@@ -3,12 +3,16 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import { markDirty, motion } from './motion';
 
-gsap.registerPlugin(ScrollTrigger);
+// No window during build-time prerendering — GSAP plumbing is browser-only.
+const isBrowser = typeof window !== 'undefined';
+if (isBrowser) gsap.registerPlugin(ScrollTrigger);
 
 export const prefersReducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  isBrowser && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const QA = import.meta.env.DEV || new URLSearchParams(location.search).get('qa') === '1';
+const QA =
+  isBrowser &&
+  (import.meta.env.DEV || new URLSearchParams(location.search).get('qa') === '1');
 if (QA) {
   (window as unknown as { __gsap: typeof gsap; __motion: typeof motion }).__gsap = gsap;
   (window as unknown as { __gsap: typeof gsap; __motion: typeof motion }).__motion = motion;

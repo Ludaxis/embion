@@ -1,17 +1,47 @@
 export const BRAND = 'EMBION';
 export const PRODUCT_CODE = 'EMB-01';
 export const PRODUCT_NAME = 'Multimodal Perception Module';
+export const SITE_URL = 'https://embion.vercel.app';
+
+export const POSITIONING = 'The perception layer for embodied AI.';
+export const PITCH =
+  'EMB-01 fuses vision, depth, sound, and motion into one synchronized stream your code reads like a camera.';
+
 export const BUILD_LOG_URL =
   'https://medium.com/@aakhv110/from-discrete-sensors-to-unified-perception-building-a-plug-and-play-multimodal-module-054c197cb266';
-export const CONTACT_MAILTO =
-  'mailto:reza@ludaxis.io?subject=EMB-01%20early%20access';
+
+export const CONTACT_EMAIL = 'reza@ludaxis.io';
+export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('EMB-01')}`;
+export const RESERVE_SUBJECT = 'EMB-01 dev kit — Batch One reservation';
+export const MODULES_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('EMB-01 modules / OEM')}`;
+
+/** Primary + secondary CTA, used site-wide. */
+export const CTA = {
+  primary: 'Reserve a dev kit',
+  primaryShort: 'Reserve dev kit',
+  primaryHref: '/devkit/',
+  secondary: 'Read the docs',
+  secondaryHref: '/developers/',
+};
+
+/** Top navigation, left to right. */
+export const NAV = [
+  { label: 'Product', href: '/' },
+  { label: 'Developers', href: '/developers/' },
+  { label: 'Research', href: '/research/' },
+  { label: 'LeRobot', href: '/lerobot/' },
+  { label: 'Datasets', href: '/datasets/' },
+  { label: 'Story', href: '/story/' },
+];
 
 export const HERO = {
   h1a: 'Every sense.',
   h1b: 'One stream.',
-  sub: `${PRODUCT_CODE} fuses a 360° LiDAR, a 10-axis IMU, global-shutter vision, an 8×8 depth grid and three directional microphones on Jetson Orin Nano Super — and hands your robot one synchronized, AI-ready frame.`,
-  ctaPrimary: 'Request early access',
-  ctaSecondary: 'Read the build log',
+  sub: `${PRODUCT_CODE} fuses vision, depth, sound, and motion into one synchronized stream your code reads like a camera. Built for the people teaching robots to understand the world.`,
+  ctaPrimary: CTA.primary,
+  ctaPrimaryHref: CTA.primaryHref,
+  ctaSecondary: CTA.secondary,
+  ctaSecondaryHref: CTA.secondaryHref,
 };
 
 export const STATS = [
@@ -23,8 +53,8 @@ export const STATS = [
 
 export const PHILOSOPHY = {
   kicker: 'Why',
-  line: 'Robots don’t need a perfect map of the world. They need a fast, meaningful understanding of what matters.',
-  body: 'Each sensor alone gives a fragment: a distance, a frame, a pressure wave. EMB-01 starts from a different question — what does a machine need to understand in order to act? The answer is context: overlapping senses, fused into one lightweight, actionable state.',
+  line: 'Robots don’t have a body problem. They have a data problem.',
+  body: 'Embodied AI is starved for synchronized multimodal data. The hard part isn’t building the body — it’s capturing what the body senses, in order, on one clock.',
 };
 
 export type Chapter = {
@@ -37,13 +67,14 @@ export type Chapter = {
   side: 'left' | 'right';
 };
 
+/** The senses. Each caption: the sense, then the failure mode it covers. */
 export const CHAPTERS: Chapter[] = [
   {
     id: 'lidar',
     anchor: 'lidar-ld19',
     kicker: '01 · Range',
-    title: 'Feel the shape of the room.',
-    body: 'The FHL-LD19 sweeps a full 360° plane at 4,500 samples per second — cutting an invisible cross-section through walls, obstacles and moving people out to 12 meters.',
+    title: 'Feels the room.',
+    body: 'Geometry that doesn’t care about lighting. The LiDAR sweeps a full 360° plane at 4,500 samples per second, out to 12 meters — in the dark, in glare, behind your robot.',
     specs: ['360° FOV', '12 m range', '4,500 samples/s'],
     side: 'left',
   },
@@ -51,8 +82,8 @@ export const CHAPTERS: Chapter[] = [
     id: 'imu',
     anchor: 'imu',
     kicker: '02 · Motion',
-    title: 'An inner ear, at 100 Hz.',
-    body: 'Proprioception for machines: the 10-axis IMU tracks orientation, acceleration and heading a hundred times a second, so every other reading lands in a stable frame of reference.',
+    title: 'Knows how it’s moving.',
+    body: 'Self-motion, so every other reading has context. Ten axes at 100 Hz — orientation, acceleration, heading — put vision, depth, and sound in a stable frame of reference.',
     specs: ['10-axis', '100 Hz', 'gyro · accel · mag · baro'],
     side: 'right',
   },
@@ -60,8 +91,8 @@ export const CHAPTERS: Chapter[] = [
     id: 'mics',
     anchor: 'mic-b',
     kicker: '03 · Sound',
-    title: 'Hearing beyond line of sight.',
-    body: 'Three directional microphones triangulate what cameras can’t see — a voice behind the robot, a door around the corner — by time-difference-of-arrival.',
+    title: 'Hears what it can’t see.',
+    body: 'Direction of sound, before line of sight. Three directional microphones place a voice behind your robot or a door around the corner by time-difference-of-arrival.',
     specs: ['3 directional mics', 'TDOA localization', 'spectrogram encoding'],
     side: 'left',
   },
@@ -69,8 +100,8 @@ export const CHAPTERS: Chapter[] = [
     id: 'camera',
     anchor: 'camera-ar0234',
     kicker: '04 · Vision',
-    title: 'A shutter that never smears.',
-    body: 'The AR0234 captures 1920×1200 at up to 120 fps with a true global shutter — geometry-grade frames with zero rolling-shutter distortion, even at speed.',
+    title: 'Sees the scene.',
+    body: 'Sharp under motion, because robots move. A true global shutter captures 1920×1200 at up to 120 fps — no rolling-shutter smear, even at speed.',
     specs: ['1920 × 1200', '120 fps', 'global shutter'],
     side: 'right',
   },
@@ -78,8 +109,8 @@ export const CHAPTERS: Chapter[] = [
     id: 'tof',
     anchor: 'tof-8x8',
     kicker: '05 · Proximity',
-    title: 'Sixty-four zones of near-field depth.',
-    body: 'An 8×8 time-of-flight array paints a fast depth curtain over the forward blind spot — the whiskers that catch what the LiDAR plane misses.',
+    title: 'Reflexes.',
+    body: 'Fast proximity, before vision has processed a frame. An 8×8 depth grid updates at up to 60 Hz across the near field the LiDAR plane misses.',
     specs: ['8 × 8 zones', '4 m reach', 'up to 60 Hz'],
     side: 'left',
   },
@@ -87,62 +118,91 @@ export const CHAPTERS: Chapter[] = [
     id: 'jetson',
     anchor: 'jetson',
     kicker: '06 · Compute',
-    title: 'A brain on board.',
-    body: 'A Jetson Orin Nano Super runs acquisition, fusion and encoding on-device: 67 TOPS of Ampere-class compute turning five raw streams into one coherent state.',
+    title: 'Fused before it leaves the device.',
+    body: 'A Jetson Orin Nano Super runs acquisition, alignment, and encoding on board — 67 TOPS turning five raw feeds into one stream before your host reads a byte.',
     specs: ['67 TOPS', '8 GB LPDDR5', 'JetPack 6'],
     side: 'right',
   },
   {
     id: 'fusion',
     anchor: 'chassis-upper',
-    kicker: '07 · Fusion',
-    title: 'Five senses. One frame.',
-    body: 'Every modality is visually encoded and composed into a single synchronized video frame. To your host it’s just a camera — plug in USB-C, and any device can read the robot’s full sensory state.',
-    specs: ['render-level sync', 'USB-C / HDMI out', 'reads as a standard camera'],
+    kicker: '07 · One stream',
+    title: 'Five senses. Complementary failure modes. One clock.',
+    body: 'Every modality lands in the same synchronized frame. To your host it’s a camera: one cable, and anything that reads video reads your robot’s full sensory state.',
+    specs: ['one shared clock', 'USB-C / HDMI out', 'reads as a standard camera'],
     side: 'left',
   },
 ];
 
-export const INTERFACE_SECTION = {
-  kicker: 'Interface',
-  title: 'If it can read a camera, it can read EMB-01.',
-  body: 'The composed frame travels over HDMI / USB-C as a standard video stream. Each region of the frame is one modality; parse the regions and you have the full state back — no custom drivers, no per-sensor pipelines.',
-  code: `# The whole module enumerates as one video device
-import cv2
-from embion import FrameParser
-
-cap = cv2.VideoCapture(0)          # EMB-01 shows up as a camera
-parser = FrameParser(layout="emb01-default")
-
-while True:
-    ok, frame = cap.read()         # one synchronized multimodal frame
-    state = parser.parse(frame)
-    state.lidar.points             # 360° planar scan (m, rad)
-    state.imu.orientation          # roll / pitch / yaw @ 100 Hz
-    state.tof.grid                 # 8x8 near-field depth (m)
-    state.audio.spectrogram        # 3-mic STFT + direction of arrival
-    state.camera.rgb               # 1920x1200 global-shutter frame`,
+/** Home — how it works. Three steps, huge type. */
+export const HOW_IT_WORKS = {
+  kicker: 'How it works',
+  steps: [
+    {
+      title: 'Plug it in.',
+      body: 'One USB-C cable. No driver zoo, no sensor plumbing.',
+    },
+    {
+      title: 'It shows up as a camera.',
+      body: 'Every modality, one synchronized stream, on any host that can read video.',
+    },
+    {
+      title: 'Five lines of Python.',
+      body: 'Decode, record, train. Export straight to LeRobot format.',
+    },
+  ],
 };
 
-export const USE_CASES = [
-  {
-    title: 'Autonomous mobile robots',
-    body: 'Path planning, obstacle avoidance and fast reaction in changing spaces — a richer picture than any single camera or range sensor.',
-  },
-  {
-    title: 'Human–robot interaction',
-    body: 'Is someone nearby? Approaching? Did they speak, and from where? Context-aware behavior around people, out of the box.',
-  },
-  {
-    title: 'Multimodal datasets & AI training',
-    body: 'Vision, depth, motion, sound and position captured from one physical scene, one timestamp — already composed as a visual input for training.',
-  },
-  {
-    title: 'Research & teaching',
-    body: 'One platform to see how five sensing modalities contribute to a single perception system — no driver zoo, no calibration marathon.',
-  },
-];
+/** Home — why one stream. */
+export const WHY_ONE_STREAM = {
+  kicker: 'Sync',
+  title: 'Sensors disagree about time. Robots can’t afford that.',
+  body: 'Fusing modalities after the fact means aligning clocks, interpolating timestamps, and praying. EMB-01 synchronizes at the source — on the device — so what you record is what actually happened, in order.',
+  todo: '[TODO: sync precision] across all five modalities.',
+};
 
+/** Home — the data story. */
+export const DATA_STORY = {
+  kicker: 'Data',
+  title: 'Robots learn from demonstrations. Demonstrations are data.',
+  body: 'Today, a multimodal recording rig is three webcams, a LiDAR with its own driver, and a weekend of alignment scripts. EMB-01 is the rig, in one head. Record synchronized episodes and export to LeRobotDataset format in one line.',
+  cta: 'See the datasets',
+  ctaHref: '/datasets/',
+};
+
+/** Home — built for builders. */
+export const BUILDERS = {
+  kicker: 'Built for builders',
+  title: 'Three doors. One module.',
+  cards: [
+    {
+      title: 'Researchers',
+      body: 'Multimodal ground truth without the plumbing. Citable, reproducible, BibTeX-ready.',
+      href: '/research/',
+    },
+    {
+      title: 'Robotics teams',
+      body: 'A perception stack prototyped in an afternoon, not a quarter.',
+      href: '/developers/',
+    },
+    {
+      title: 'LeRobot community',
+      body: 'The perception head for your SO-101 rig.',
+      href: '/lerobot/',
+    },
+  ],
+};
+
+/** Home — dev kit band. */
+export const DEVKIT_BAND = {
+  kicker: 'Developer kit',
+  title: 'EMB-01 Developer Kit — Batch One.',
+  facts: ['[TODO: price]', '[TODO: batch size] units, hand-assembled in Tallinn', '[TODO: ship window]'],
+  cta: 'Reserve yours',
+  ctaHref: '/devkit/',
+};
+
+/** Full spec table (real values from the working proof of concept). */
 export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
   {
     group: 'Ranging',
@@ -182,44 +242,37 @@ export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
     group: 'Interface',
     rows: [
       ['Output', 'Single composed video frame · HDMI → USB-C capture'],
-      ['Synchronization', 'Render-level — all modalities share one frame clock'],
+      ['Synchronization', 'On-device — all modalities share one frame clock · [TODO: sync precision]'],
       ['Host requirements', 'Anything that reads a standard camera stream'],
     ],
   },
   {
-    group: 'Structure',
+    group: 'Physical',
     rows: [
       ['Chassis', '3D-printed modular frame · sensor positions reconfigurable'],
-      ['Status', 'Proof of concept · specifications preliminary'],
+      ['Weight', '[TODO: weight]'],
+      ['Power', '[TODO: power draw]'],
+    ],
+  },
+  {
+    group: 'Status',
+    rows: [
+      ['Stage', 'Working proof of concept · specifications preliminary'],
     ],
   },
 ];
 
-export const FAQ: { q: string; a: string }[] = [
-  {
-    q: 'How does the module connect to my system?',
-    a: 'Over HDMI into a USB-C capture card. The host sees a standard camera stream — any device that can read a webcam can read EMB-01, no custom drivers.',
-  },
-  {
-    q: 'What exactly is in the output frame?',
-    a: 'One composed image per tick: LiDAR planar scans, the 8×8 ToF grid, IMU orientation, GPS-style position (where fitted), the microphone spectrogram and the camera view — each in a fixed region you can parse back into raw values.',
-  },
-  {
-    q: 'How are the sensors synchronized?',
-    a: 'At the render level. Every modality is drawn into the same frame by the same clock on the Jetson, so a frame is a snapshot of the whole sensory state at one moment.',
-  },
-  {
-    q: 'Can I use it with ROS 2?',
-    a: 'The stream arrives as a standard camera topic; a parser node splits it into per-modality topics. A reference ROS 2 driver is part of the roadmap.',
-  },
-  {
-    q: 'Can the sensor arrangement be customized?',
-    a: 'The chassis is 3D-printed and modular by design — sensor positions, additions and the encoding layout are all reconfigurable.',
-  },
-  {
-    q: 'What is the current status?',
-    a: 'Working proof of concept, documented publicly in a seven-part build log. Specifications are preliminary and will evolve through validation.',
-  },
-];
-
 export const FOOTER_NOTE = `${PRODUCT_CODE} is a working proof of concept. Specifications preliminary.`;
+
+/** Footer — links and the quiet OEM back door. */
+export const FOOTER = {
+  captureTitle: 'Batch One is small. Get in line.',
+  links: [
+    { label: 'Docs', href: '/developers/' },
+    { label: 'GitHub', href: '', todo: '[TODO: link]' },
+    { label: 'Discord', href: '', todo: '[TODO: link]' },
+    { label: 'Build log', href: BUILD_LOG_URL },
+    { label: 'Contact', href: CONTACT_MAILTO },
+  ],
+  modulesLine: 'Building a product on EMB-01? Talk to us about modules.',
+};

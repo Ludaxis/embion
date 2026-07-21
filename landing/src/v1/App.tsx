@@ -7,12 +7,18 @@ import { Callouts } from './Callouts';
 import { AfterTrack } from './Sections';
 import {
   BRAND, PRODUCT_CODE, PRODUCT_NAME, HERO, PHILOSOPHY, STATS, CHAPTERS,
-  BUILD_LOG_URL, CONTACT_MAILTO,
+  NAV, CTA,
 } from '../content/product';
 
 // The whole 3D layer is lazy so first paint = hero DOM + poster off a tiny
-// bundle; the ~three/drei/postprocessing chunk streams in after.
-const Scene = lazy(() => import('./Scene'));
+// bundle; the ~three/drei/postprocessing chunk streams in after. During
+// build-time prerendering there is no window: never resolve, so the Suspense
+// boundary emits its fallback and the 3D stack stays out of the SSR pass.
+const Scene = lazy(() =>
+  typeof window === 'undefined'
+    ? new Promise<never>(() => {})
+    : import('./Scene'),
+);
 
 gsap.registerPlugin(useGSAP);
 
@@ -286,12 +292,17 @@ export function App() {
           {BRAND}<span className="brand-dot">·</span><span className="brand-code">{PRODUCT_CODE}</span>
         </a>
         <nav>
-          <a href="#specs">Specs</a>
-          <a href="#faq">FAQ</a>
-          <a href="/v3/">Explore 3D</a>
-          <a href={BUILD_LOG_URL} target="_blank" rel="noreferrer">Build log</a>
+          {NAV.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              aria-current={item.href === '/' ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
         </nav>
-        <a className="btn btn-small" href={CONTACT_MAILTO}>Early access</a>
+        <a className="btn btn-small" href={CTA.primaryHref}>{CTA.primaryShort}</a>
       </header>
 
       {/* Fixed 3D layer */}
@@ -326,8 +337,8 @@ export function App() {
             </h1>
             <p className="hero-sub">{HERO.sub}</p>
             <div className="hero-ctas">
-              <a className="btn" href={CONTACT_MAILTO}>{HERO.ctaPrimary}</a>
-              <a className="btn btn-ghost" href={BUILD_LOG_URL} target="_blank" rel="noreferrer">
+              <a className="btn" href={HERO.ctaPrimaryHref}>{HERO.ctaPrimary}</a>
+              <a className="btn btn-ghost" href={HERO.ctaSecondaryHref}>
                 {HERO.ctaSecondary}
               </a>
             </div>

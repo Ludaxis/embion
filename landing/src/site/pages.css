@@ -1,0 +1,193 @@
+/* ============ Sub-pages + shared sections — additive only ============
+   Reuses the Noir design tokens and components defined in v1/styles.css.
+   Nothing here restyles an existing class. */
+
+/* ---------- visible [TODO] placeholders ---------- */
+.todo {
+  font-family: var(--mono); font-size: 0.82em; letter-spacing: 0.02em;
+  color: var(--fg-muted); white-space: nowrap;
+  padding: 1px 8px 2px; border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ---------- sub-page shell ---------- */
+.subpage { position: relative; z-index: 10; background: var(--bg); }
+.page-main { padding-top: clamp(96px, 14vh, 150px); }
+.site-header nav a[aria-current='page'] { color: var(--fg); }
+
+.page-hero {
+  padding: clamp(20px, 4vw, 60px) clamp(20px, 6vw, 96px) clamp(40px, 6vw, 80px);
+  max-width: 1180px; margin: 0 auto; width: 100%;
+}
+.page-hero h1 {
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  letter-spacing: -0.03em; line-height: 1.02;
+  display: block; max-width: 15em; text-wrap: balance;
+}
+.page-sub {
+  margin-top: 26px; max-width: 36em; font-size: clamp(16px, 1.4vw, 19px);
+  color: var(--fg-muted); line-height: 1.65;
+}
+
+/* ---------- how-it-works / quickstart steps ---------- */
+.steps {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: clamp(28px, 4vw, 64px); margin-top: 64px;
+}
+.step-index {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em;
+  color: var(--accent);
+}
+.step h3 {
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem); font-weight: 600;
+  letter-spacing: -0.025em; line-height: 1.08; margin: 14px 0 12px;
+}
+.step p { color: var(--fg-muted); font-size: 15.5px; max-width: 26em; }
+
+/* ---------- linked cards (built for builders) ---------- */
+a.case-card { display: block; text-decoration: none; color: inherit; }
+.case-arrow {
+  display: inline-block; margin-top: 16px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+/* ---------- dev kit band facts ---------- */
+.band-facts {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  margin-top: 26px; font-family: var(--mono); font-size: 13px;
+  color: var(--fg-muted); align-items: center;
+}
+.band-facts .dot { color: var(--fg-faint); }
+
+/* ---------- email capture ---------- */
+.capture { margin-top: 28px; }
+.capture-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.capture-form input {
+  flex: 1 1 240px; min-width: 0;
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--hairline); border-radius: 999px;
+  padding: 13px 22px; font-family: var(--sans); font-size: 15px;
+  outline: none; transition: border-color 0.25s;
+}
+.capture-form input:focus { border-color: rgba(255, 77, 0, 0.5); }
+.capture-form input::placeholder { color: var(--fg-faint); }
+.capture-form .btn { border: none; cursor: pointer; }
+.capture-note {
+  margin-top: 12px; font-size: 13px; color: var(--fg-faint);
+}
+.capture-note a { color: var(--fg-muted); }
+.capture-note a:hover { color: var(--fg); }
+
+/* ---------- big footer ---------- */
+.big-footer { position: relative; z-index: 30; background: var(--bg); }
+.footer-capture {
+  padding: clamp(60px, 8vw, 110px) clamp(20px, 6vw, 96px) clamp(40px, 5vw, 70px);
+  max-width: 1180px; margin: 0 auto; width: 100%;
+}
+.footer-capture h3 {
+  font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.footer-capture .capture-form { max-width: 460px; }
+.footer-links {
+  display: flex; flex-wrap: wrap; gap: clamp(18px, 3vw, 36px);
+  padding: 0 clamp(20px, 6vw, 96px) 40px;
+  max-width: 1180px; margin: 0 auto; width: 100%;
+  font-size: 14px;
+}
+.footer-links a { color: var(--fg-muted); text-decoration: none; }
+.footer-links a:hover { color: var(--fg); }
+.footer-dead-link { color: var(--fg-faint); }
+.footer-meta { font-family: var(--mono); }
+.footer-modules { font-size: 12px; }
+
+/* ---------- prose sections on sub-pages ---------- */
+.panel h3 {
+  font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 600;
+  letter-spacing: -0.02em; margin-bottom: 10px;
+}
+.panel-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(28px, 4vw, 56px); margin-top: 56px;
+}
+.panel-grid p { color: var(--fg-muted); font-size: 15px; max-width: 30em; }
+.panel .code-card { margin-top: 40px; max-width: 720px; }
+.panel-cta { margin-top: 36px; display: flex; gap: 14px; flex-wrap: wrap; }
+
+/* plain lists (compatibility, what's in the box, what it isn't) */
+.plain-list { list-style: none; margin-top: 36px; max-width: 720px; }
+.plain-list li {
+  padding: 18px 4px; border-top: 1px solid var(--hairline);
+  color: var(--fg-muted); font-size: 15.5px;
+}
+.plain-list li:last-child { border-bottom: 1px solid var(--hairline); }
+.plain-list li strong { color: var(--fg); font-weight: 500; }
+
+/* ---------- composed-frame diagram (developers) ---------- */
+.frame-diagram {
+  margin-top: 48px; max-width: 720px;
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 0 0 1px var(--hairline), 0 24px 70px rgba(0, 0, 0, 0.5);
+  background: #0d0d0f;
+  display: grid; grid-template-columns: 2fr 1fr; grid-auto-rows: minmax(72px, auto);
+  aspect-ratio: 16 / 9;
+}
+.frame-region {
+  display: flex; align-items: flex-end; padding: 12px 14px;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em;
+  color: var(--fg-muted); border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.frame-region.is-camera {
+  grid-row: 1 / span 4; background: rgba(255, 77, 0, 0.05);
+  color: var(--fg); align-items: flex-start;
+}
+.frame-caption {
+  margin-top: 14px; font-family: var(--mono); font-size: 11.5px;
+  letter-spacing: 0.06em; color: var(--fg-faint); max-width: 720px;
+}
+
+/* ---------- media placeholder (lerobot) ---------- */
+.media-placeholder {
+  margin-top: 48px; max-width: 860px; aspect-ratio: 16 / 9;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 16px; border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: var(--surface); padding: 24px; text-align: center;
+}
+
+/* ---------- devkit price row ---------- */
+.price-row {
+  display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  margin-top: 48px; padding: 26px 0; border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+.price-label {
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent);
+}
+.price-value { font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 600; }
+
+/* ---------- story ---------- */
+.story-prose { max-width: 44em; }
+.story-prose p {
+  color: var(--fg-muted); font-size: clamp(16.5px, 1.5vw, 19px);
+  line-height: 1.7;
+}
+.story-prose p + p { margin-top: 22px; }
+.story-place {
+  margin-top: 30px; font-family: var(--mono); font-size: 12px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-faint);
+}
+.story-closer {
+  font-size: clamp(1.6rem, 3.4vw, 2.7rem); font-weight: 500;
+  letter-spacing: -0.02em; max-width: 22em; text-wrap: balance;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .steps { grid-template-columns: 1fr; gap: 34px; }
+  .frame-diagram { grid-template-columns: 1fr 1fr; aspect-ratio: auto; }
+  .frame-region.is-camera { grid-row: 1 / span 1; grid-column: 1 / span 2; min-height: 130px; }
+  .capture-form .btn { flex: 1 1 auto; }
+}

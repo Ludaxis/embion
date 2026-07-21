@@ -5,11 +5,17 @@ import { motion, screenAnchors, requestRender } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
 import { EXTRACT_VECTORS } from '../three/parts';
 import {
-  BRAND, PRODUCT_CODE, CHAPTERS, BUILD_LOG_URL, CONTACT_MAILTO,
+  BRAND, PRODUCT_CODE, CHAPTERS, NAV, CTA,
 } from '../content/product';
 
 // 3D layer lazy-loaded so first paint = DOM + poster off a tiny bundle.
-const Scene = lazy(() => import('./Scene'));
+// No window (build-time prerender): never resolve, so Suspense emits the
+// fallback and the 3D stack stays out of the SSR pass.
+const Scene = lazy(() =>
+  typeof window === 'undefined'
+    ? new Promise<never>(() => {})
+    : import('./Scene'),
+);
 
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
@@ -280,10 +286,11 @@ export function App() {
           {BRAND}<span className="brand-dot">·</span><span className="brand-code">{PRODUCT_CODE}</span>
         </a>
         <nav>
-          <a href="/">Story</a>
-          <a href={BUILD_LOG_URL} target="_blank" rel="noreferrer">Build log</a>
+          {NAV.map((item) => (
+            <a key={item.href} href={item.href}>{item.label}</a>
+          ))}
         </nav>
-        <a className="btn btn-small" href={CONTACT_MAILTO}>Early access</a>
+        <a className="btn btn-small" href={CTA.primaryHref}>{CTA.primaryShort}</a>
       </header>
 
       <div className="stage-title">

@@ -1,73 +1,92 @@
-import { useState } from 'react';
 import {
-  INTERFACE_SECTION, USE_CASES, SPEC_GROUPS, FAQ, FOOTER_NOTE,
-  BUILD_LOG_URL, CONTACT_MAILTO, PRODUCT_CODE, BRAND,
+  HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND,
 } from '../content/product';
+import { SiteFooter, TodoText } from '../site/chrome';
 
 /** Everything after the 3D scroll track — opaque, DOM-first, SEO-real. */
 export function AfterTrack() {
   return (
     <div id="after-track">
-      <InterfaceSection />
-      <UseCases />
-      <Specs />
-      <Faq />
-      <FinalCta />
-      <footer className="site-footer">
-        <span>{BRAND} — {new Date().getFullYear()}</span>
-        <span className="footer-note">{FOOTER_NOTE}</span>
-        <a href={BUILD_LOG_URL} target="_blank" rel="noreferrer">Build log</a>
-      </footer>
+      <HowItWorks />
+      <WhyOneStream />
+      <DataStory />
+      <BuiltForBuilders />
+      <DevkitBand />
+      <SiteFooter />
     </div>
   );
 }
 
-function InterfaceSection() {
-  const [copied, setCopied] = useState(false);
+function HowItWorks() {
   return (
-    <section className="panel" id="interface">
+    <section className="panel" id="how-it-works">
       <div className="panel-inner">
         <div className="panel-copy reveal">
-          <p className="kicker">{INTERFACE_SECTION.kicker}</p>
-          <h2>{INTERFACE_SECTION.title}</h2>
-          <p className="panel-body">{INTERFACE_SECTION.body}</p>
+          <p className="kicker">{HOW_IT_WORKS.kicker}</p>
         </div>
-        <div className="code-card reveal">
-          <div className="code-head">
-            <span className="code-lang">python</span>
-            <button
-              className="code-copy"
-              onClick={() => {
-                navigator.clipboard.writeText(INTERFACE_SECTION.code);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1600);
-              }}
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <pre><code>{INTERFACE_SECTION.code}</code></pre>
+        <div className="steps">
+          {HOW_IT_WORKS.steps.map((s, i) => (
+            <div className="step reveal" key={s.title}>
+              <span className="step-index">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-function UseCases() {
+function WhyOneStream() {
   return (
-    <section className="panel" id="use-cases">
+    <section className="panel" id="why-one-stream">
       <div className="panel-inner">
         <div className="panel-copy reveal">
-          <p className="kicker">Where it goes</p>
-          <h2>Built for machines that share our world.</h2>
+          <p className="kicker">{WHY_ONE_STREAM.kicker}</p>
+          <h2>{WHY_ONE_STREAM.title}</h2>
+          <p className="panel-body">
+            {WHY_ONE_STREAM.body} <TodoText text={WHY_ONE_STREAM.todo} />
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DataStory() {
+  return (
+    <section className="panel" id="data-story">
+      <div className="panel-inner">
+        <div className="panel-copy reveal">
+          <p className="kicker">{DATA_STORY.kicker}</p>
+          <h2>{DATA_STORY.title}</h2>
+          <p className="panel-body">{DATA_STORY.body}</p>
+          <div className="panel-cta">
+            <a className="btn btn-ghost" href={DATA_STORY.ctaHref}>{DATA_STORY.cta}</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BuiltForBuilders() {
+  return (
+    <section className="panel" id="builders">
+      <div className="panel-inner">
+        <div className="panel-copy reveal">
+          <p className="kicker">{BUILDERS.kicker}</p>
+          <h2>{BUILDERS.title}</h2>
         </div>
         <div className="cases-grid">
-          {USE_CASES.map((u, i) => (
-            <div className="case-card reveal" key={u.title}>
+          {BUILDERS.cards.map((c, i) => (
+            <a className="case-card reveal" key={c.title} href={c.href}>
               <span className="case-index">{String(i + 1).padStart(2, '0')}</span>
-              <h3>{u.title}</h3>
-              <p>{u.body}</p>
-            </div>
+              <h3>{c.title}</h3>
+              <p>{c.body}</p>
+              <span className="case-arrow">→</span>
+            </a>
           ))}
         </div>
       </div>
@@ -75,70 +94,22 @@ function UseCases() {
   );
 }
 
-function Specs() {
+function DevkitBand() {
   return (
-    <section className="panel" id="specs">
-      <div className="panel-inner">
-        <div className="panel-copy reveal">
-          <p className="kicker">Specifications</p>
-          <h2>{PRODUCT_CODE}, on paper.</h2>
-        </div>
-        <div className="spec-table reveal">
-          {SPEC_GROUPS.map((g) => (
-            <div className="spec-group" key={g.group}>
-              <div className="spec-group-name">{g.group}</div>
-              <div className="spec-rows">
-                {g.rows.map(([k, v]) => (
-                  <div className="spec-row" key={k}>
-                    <span className="spec-key">{k}</span>
-                    <span className="spec-val">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Faq() {
-  return (
-    <section className="panel" id="faq">
-      <div className="panel-inner">
-        <div className="panel-copy reveal">
-          <p className="kicker">FAQ</p>
-          <h2>The practical questions.</h2>
-        </div>
-        <div className="faq-list reveal">
-          {FAQ.map((f) => (
-            <details key={f.q}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FinalCta() {
-  return (
-    <section className="panel final-cta" id="cta">
+    <section className="panel final-cta" id="devkit-band">
       <div className="panel-inner reveal">
-        <p className="kicker">{PRODUCT_CODE}</p>
-        <h2 className="cta-line">Give your robot every sense.</h2>
-        <p className="panel-body">
-          A working proof of concept, documented end to end. Follow the build,
-          or get in early.
-        </p>
+        <p className="kicker">{DEVKIT_BAND.kicker}</p>
+        <h2 className="cta-line">{DEVKIT_BAND.title}</h2>
+        <div className="band-facts">
+          {DEVKIT_BAND.facts.map((f, i) => (
+            <span key={f}>
+              {i > 0 && <span className="dot">·&nbsp;&nbsp;</span>}
+              <TodoText text={f} />
+            </span>
+          ))}
+        </div>
         <div className="hero-ctas">
-          <a className="btn" href={CONTACT_MAILTO}>Request early access</a>
-          <a className="btn btn-ghost" href={BUILD_LOG_URL} target="_blank" rel="noreferrer">
-            Read the build log
-          </a>
+          <a className="btn" href={DEVKIT_BAND.ctaHref}>{DEVKIT_BAND.cta}</a>
         </div>
       </div>
     </section>
