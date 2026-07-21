@@ -4,6 +4,33 @@ import {
   CONTACT_EMAIL, MODULES_MAILTO, RESERVE_SUBJECT,
 } from '../content/product';
 
+/** Fire-and-forget analytics beacon. First-party, no cookies, no IDs.
+ *  /api/event forwards to ANALYTICS_WEBHOOK_URL when configured, else 204s. */
+export function track(event: string, data?: Record<string, unknown>) {
+  try {
+    const payload = JSON.stringify({ event, path: location.pathname, ...data });
+    if (!navigator.sendBeacon?.('/api/event', payload)) {
+      fetch('/api/event', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+    }
+  } catch {
+    // analytics must never break the page
+  }
+}
+
+/** Footnote reference into the numbered sources list on /story#sources. */
+export function Fn({ ns, base = '/story/' }: { ns: number[]; base?: string }) {
+  return (
+    <sup className="fn">
+      <a
+        href={`${base}#sources`}
+        aria-label={`${ns.length === 1 ? 'Source' : 'Sources'} ${ns.join(', ')}`}
+      >
+        {ns.join(', ')}
+      </a>
+    </sup>
+  );
+}
+
 /** Same fixed header as the home page, with the site-wide nav. */
 export function SiteHeader({ current }: { current?: string }) {
   return (
@@ -44,31 +71,65 @@ export function TodoText({ text }: { text: string }) {
   );
 }
 
+type CaptureState = 'idle' | 'sending' | 'ok' | 'error';
+
 /**
- * Email capture with no backend: submitting opens a prefilled email to us.
- * A plain mailto link sits beside it so the path works without JavaScript.
+ * Email capture. Submissions POST to /api/reserve (stored server-side once
+ * SUPABASE_* or RESERVE_WEBHOOK_URL env vars are configured on Vercel). Until
+ * then — or on any failure — it falls back to opening a prefilled email, so
+ * the path always works. A plain mailto link handles the no-JS case.
  */
 export function EmailCapture({
   subject,
   cta,
+  kind = 'reserve',
+  successCopy = 'You’re in line. We’ll email you before Batch One ships.',
   placeholder = 'you@lab.edu',
 }: {
   subject: string;
   cta: string;
+  kind?: 'reserve' | 'lab' | 'notify';
+  successCopy?: string;
   placeholder?: string;
 }) {
   const [email, setEmail] = useState('');
+  const [hp, setHp] = useState(''); // honeypot: humans never see or fill it
+  const [state, setState] = useState<CaptureState>('idle');
   const mailto = (body?: string) =>
     `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}${
       body ? `&body=${encodeURIComponent(body)}` : ''
     }`;
+
+  const submit = async () => {
+    setState('sending');
+    track(kind === 'lab' ? 'lab_apply_submit' : kind === 'notify' ? 'notify_submit' : 'reserve_submit');
+    try {
+      const res = await fetch('/api/reserve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, kind, subject, company: hp }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setState('ok');
+    } catch {
+      // Server-side storage not reachable (or not configured yet): hand the
+      // reservation to the visitor's email app instead so nothing is lost.
+      setState('error');
+      window.location.href = mailto(`Put me on the list: ${email}`);
+    }
+  };
+
+  if (state === 'ok') {
+    return <p className="capture capture-success">{successCopy}</p>;
+  }
+
   return (
     <div className="capture">
       <form
         className="capture-form"
         onSubmit={(e) => {
           e.preventDefault();
-          window.location.href = mailto(`Put me on the list: ${email}`);
+          void submit();
         }}
       >
         <input
@@ -78,13 +139,33 @@ export function EmailCapture({
           onChange={(e) => setEmail(e.target.value)}
           placeholder={placeholder}
           aria-label="Email address"
+          disabled={state === 'sending'}
         />
-        <button className="btn" type="submit">{cta}</button>
+        <input
+          type="text"
+          name="company"
+          className="hp-field"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          value={hp}
+          onChange={(e) => setHp(e.target.value)}
+        />
+        <button className="btn" type="submit" disabled={state === 'sending'}>
+          {state === 'sending' ? 'Sending…' : cta}
+        </button>
       </form>
-      <p className="capture-note">
-        Sends a prefilled email — or write to{' '}
-        <a href={mailto()}>{CONTACT_EMAIL}</a> directly.
-      </p>
+      {state === 'error' ? (
+        <p className="capture-note" role="status">
+          We couldn’t save that automatically, so your email app opened with it
+          instead. Or write to <a href={mailto()}>{CONTACT_EMAIL}</a>.
+        </p>
+      ) : (
+        <p className="capture-note">
+          No payment, no spam — or write to{' '}
+          <a href={mailto()}>{CONTACT_EMAIL}</a> directly.
+        </p>
+      )}
     </div>
   );
 }
@@ -103,6 +184,7 @@ export function SiteFooter() {
             <a
               key={l.label}
               href={l.href}
+              onClick={l.label === 'Docs' ? () => track('docs_click') : undefined}
               {...(l.href.startsWith('http')
                 ? { target: '_blank', rel: 'noreferrer' }
                 : {})}

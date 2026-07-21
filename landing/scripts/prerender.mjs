@@ -5,12 +5,23 @@
 //
 // Runs after `vite build`. Uses a middleware-mode Vite server purely as a
 // TS/JSX module loader for the SSR pass — nothing listens on a port.
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { createServer } from 'vite';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Preload the display faces (hashed names are only known after the build).
+// Kills the font-swap layout shift on the big headlines. Per-page: /v3/ never
+// loads geist-mono 500, so preloading it there would just waste a request.
+const assets = await readdir(resolve(root, 'dist/assets'));
+const fontPreload = (pattern) => assets
+  .filter((f) => pattern.test(f))
+  .map((f) => `    <link rel="preload" as="font" type="font/woff2" href="/assets/${f}" crossorigin />\n`)
+  .join('');
+const FONTS_ALL = fontPreload(/^geist-(sans-latin-(400|500|600)|mono-latin-(400|500))-normal-.*\.woff2$/);
+const FONTS_V3 = fontPreload(/^geist-(sans-latin-(400|500|600)|mono-latin-400)-normal-.*\.woff2$/);
 
 const PAGES = [
   { id: 'home', file: 'dist/index.html' },
@@ -44,7 +55,10 @@ try {
     if (!app || app.length < 500) {
       throw new Error(`${page.file}: suspiciously small prerender (${app.length} bytes)`);
     }
-    await writeFile(path, html.replace(MARKER, `<div id="root">${app}</div>`));
+    const out = html
+      .replace(MARKER, `<div id="root">${app}</div>`)
+      .replace('</head>', `${page.id === 'v3' ? FONTS_V3 : FONTS_ALL}  </head>`);
+    await writeFile(path, out);
     console.log(`prerendered ${page.file} (${(app.length / 1024).toFixed(1)} kB)`);
   }
 } finally {

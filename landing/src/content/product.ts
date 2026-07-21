@@ -144,7 +144,7 @@ export const HOW_IT_WORKS = {
     },
     {
       title: 'It shows up as a camera.',
-      body: 'Every modality, one synchronized stream, on any host that can read video.',
+      body: 'Every modality, one synchronized stream, on any host that reads video.',
     },
     {
       title: 'Five lines of Python.',
@@ -158,7 +158,7 @@ export const WHY_ONE_STREAM = {
   kicker: 'Sync',
   title: 'Sensors disagree about time. Robots can’t afford that.',
   body: 'Fusing modalities after the fact means aligning clocks, interpolating timestamps, and praying. EMB-01 synchronizes at the source — on the device — so what you record is what actually happened, in order.',
-  todo: '[TODO: sync precision] across all five modalities.',
+  todo: '[TODO: measured sync precision] across all five modalities.',
 };
 
 /** Home — the data story. */
@@ -168,7 +168,62 @@ export const DATA_STORY = {
   body: 'Today, a multimodal recording rig is three webcams, a LiDAR with its own driver, and a weekend of alignment scripts. EMB-01 is the rig, in one head. Record synchronized episodes and export to LeRobotDataset format in one line.',
   cta: 'See the datasets',
   ctaHref: '/datasets/',
+  microStat:
+    'The entire open robot-learning corpus is ~1M episodes — pooled from 60+ labs. The field needs more instruments.',
+  microStatFns: [6, 7],
 };
+
+/** Home — why now teaser (links to /story#why-now). */
+export const WHY_NOW_TEASER = {
+  line: 'Compute got cheap. Models got good. Data is the bottleneck — and it has to be recorded, not scraped.',
+  cta: 'Why now',
+  href: '/story/#why-now',
+};
+
+/** Numbered sources for every market stat on the site (rendered on /story#sources). */
+export type Source = { n: number; label: string; url: string };
+export const SOURCES: Source[] = [
+  {
+    n: 1,
+    label: 'Goldman Sachs Research — the global market for robots could reach $38 billion by 2035',
+    url: 'https://www.goldmansachs.com/insights/articles/the-global-market-for-robots-could-reach-38-billion-by-2035',
+  },
+  {
+    n: 2,
+    label: 'Morgan Stanley — humanoid robot market projected at $5 trillion by 2050',
+    url: 'https://www.morganstanley.com/insights/articles/humanoid-robot-market-5-trillion-by-2050',
+  },
+  {
+    n: 3,
+    label: 'CNBC, June 2026 — Morgan Stanley doubles its China 2026 humanoid shipment forecast to 50,000',
+    url: 'https://www.cnbc.com/2026/06/24/morgan-stanley-china-humanoid-robot-market-forecast.html',
+  },
+  {
+    n: 4,
+    label: 'BusinessWire, Jan 2026 — Skild AI raise at a $14B+ valuation, backed by SoftBank and NVIDIA’s venture arm',
+    url: 'https://www.businesswire.com/news/home/20260114335623/en/',
+  },
+  {
+    n: 5,
+    label: 'The Elec, Mar 2026 — Physical Intelligence at an $11B valuation, pre-revenue',
+    url: 'https://thelec.net/news/articleView.html?idxno=6214',
+  },
+  {
+    n: 6,
+    label: 'Shaip, June 2026 — robot training-data strategy: ~1M-episode open corpus; 5–50 episodes per operator-hour',
+    url: 'https://www.shaip.com/blog/robot-training-data-strategy/',
+  },
+  {
+    n: 7,
+    label: 'arXiv 2508.10399 — embodied datasets vs web-scale corpora; 60+ labs pooling data',
+    url: 'https://arxiv.org/pdf/2508.10399',
+  },
+  {
+    n: 8,
+    label: 'SVRC / AI Journal, 2026 — depth-camera street prices and host requirements',
+    url: 'https://roboticscenter.ai/blog/best-depth-cameras-robotics',
+  },
+];
 
 /** Home — built for builders. */
 export const BUILDERS = {

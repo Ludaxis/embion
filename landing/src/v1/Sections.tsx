@@ -1,7 +1,7 @@
 import {
-  HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND,
+  HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND, WHY_NOW_TEASER,
 } from '../content/product';
-import { SiteFooter, TodoText } from '../site/chrome';
+import { Fn, SiteFooter, TodoText } from '../site/chrome';
 
 /** Everything after the 3D scroll track — opaque, DOM-first, SEO-real. */
 export function AfterTrack() {
@@ -11,6 +11,7 @@ export function AfterTrack() {
       <WhyOneStream />
       <DataStory />
       <BuiltForBuilders />
+      <WhyNowTeaser />
       <DevkitBand />
       <SiteFooter />
     </div>
@@ -62,9 +63,14 @@ function DataStory() {
           <p className="kicker">{DATA_STORY.kicker}</p>
           <h2>{DATA_STORY.title}</h2>
           <p className="panel-body">{DATA_STORY.body}</p>
-          <div className="panel-cta">
-            <a className="btn btn-ghost" href={DATA_STORY.ctaHref}>{DATA_STORY.cta}</a>
-          </div>
+          <p className="micro-stat">
+            {DATA_STORY.microStat}
+            <Fn ns={DATA_STORY.microStatFns} />
+          </p>
+          {/* text link, not a button: the site has exactly two button CTAs */}
+          <p className="panel-cta">
+            <a className="teaser-link" href={DATA_STORY.ctaHref}>→ {DATA_STORY.cta}</a>
+          </p>
         </div>
       </div>
     </section>
@@ -89,6 +95,19 @@ function BuiltForBuilders() {
             </a>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function WhyNowTeaser() {
+  return (
+    <section className="panel" id="why-now-teaser">
+      <div className="panel-inner reveal">
+        <p className="teaser-line">
+          {WHY_NOW_TEASER.line}{' '}
+          <a className="teaser-link" href={WHY_NOW_TEASER.href}>→ {WHY_NOW_TEASER.cta}</a>
+        </p>
       </div>
     </section>
   );

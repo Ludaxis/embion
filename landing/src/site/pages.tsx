@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import {
-  PageShell, PageHero, CodeCard, EmailCapture, Todo, TodoText,
+  PageShell, PageHero, CodeCard, EmailCapture, Todo, TodoText, Fn, track,
 } from './chrome';
 import {
-  CTA, SPEC_GROUPS, MODULES_MAILTO, BUILD_LOG_URL,
+  CTA, SPEC_GROUPS, MODULES_MAILTO, SOURCES,
 } from '../content/product';
 import {
   DEVELOPERS, RESEARCH, LEROBOT, DATASETS, DEVKIT, STORY,
@@ -24,8 +25,8 @@ export function DevelopersPage() {
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">{d.quickstart.title}</p>
-          <h2>From cable to first frame.</h2>
+          <p className="kicker">{d.quickstart.kicker}</p>
+          <h2>{d.quickstart.title}</h2>
           <div className="steps">
             {d.quickstart.steps.map((s, i) => (
               <div className="step" key={s.title}>
@@ -35,6 +36,14 @@ export function DevelopersPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
+          <p className="kicker">{d.raw.kicker}</p>
+          <h2>{d.raw.title}</h2>
+          <p className="panel-body"><TodoText text={d.raw.body} /></p>
         </div>
       </section>
 
@@ -51,6 +60,16 @@ export function DevelopersPage() {
           <p className="frame-caption">The composed frame. Fixed regions, one clock, parse and go.</p>
           <div className="code-card-wrap">
             <CodeCard code={d.format.code} badge={d.codeTodo} />
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
+          <p className="kicker">Demo</p>
+          <h2>Ninety seconds, plug to stream.</h2>
+          <div className="media-placeholder">
+            <Todo>{d.demoTodo}</Todo>
           </div>
         </div>
       </section>
@@ -87,11 +106,7 @@ export function DevelopersPage() {
         <div className="panel-inner">
           <p className="kicker">Limits</p>
           <h2>{d.isnt.title}</h2>
-          <ul className="plain-list">
-            {d.isnt.items.map((item) => (
-              <li key={item}><TodoText text={item} /></li>
-            ))}
-          </ul>
+          <p className="panel-body"><TodoText text={d.isnt.body} /></p>
         </div>
       </section>
 
@@ -106,20 +121,25 @@ export function ResearchPage() {
   const r = RESEARCH;
   return (
     <PageShell current="/research/">
-      <PageHero kicker={r.kicker} title={r.h1} sub={r.sub} />
+      <PageHero
+        kicker={r.kicker}
+        title={r.h1}
+        sub={<>{r.intro}<Fn ns={r.introFns} /></>}
+      />
 
       <section className="panel">
         <div className="panel-inner">
           <p className="kicker">In the lab</p>
-          <h2>Capture once. Trust it.</h2>
-          <div className="panel-grid">
-            {r.themes.map((t) => (
-              <div key={t.title}>
-                <h3>{t.title}</h3>
-                <p><TodoText text={t.body} /></p>
-              </div>
-            ))}
-          </div>
+          <h2>{r.methods.title}</h2>
+          <p className="panel-body"><TodoText text={r.methods.body} /></p>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
+          <p className="kicker">In the pipeline</p>
+          <h2>{r.corpus.title}</h2>
+          <p className="panel-body">{r.corpus.body}</p>
         </div>
       </section>
 
@@ -138,7 +158,12 @@ export function ResearchPage() {
           <h2>{r.foundingLabs.title}</h2>
           <p className="panel-body">{r.foundingLabs.body}</p>
           <div style={{ maxWidth: 520 }}>
-            <EmailCapture subject={r.foundingLabs.subject} cta={r.foundingLabs.cta} />
+            <EmailCapture
+              subject={r.foundingLabs.subject}
+              cta={r.foundingLabs.cta}
+              kind="lab"
+              successCopy="Application received. We read every one."
+            />
           </div>
           <p className="capture-note">{r.foundingLabs.note}</p>
         </div>
@@ -167,21 +192,30 @@ export function LeRobotPage() {
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">Fit</p>
-          <h2>{l.compat.title}</h2>
-          <ul className="plain-list">
-            {l.compat.items.map((item) => (
-              <li key={item}><TodoText text={item} /></li>
-            ))}
-          </ul>
+          <p className="kicker">End to end</p>
+          <h2>{l.example.title}</h2>
+          <p className="panel-body"><TodoText text={l.example.body} /></p>
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">End to end</p>
-          <h2>{l.example.title}</h2>
-          <p className="panel-body"><TodoText text={l.example.body} /></p>
+          <p className="kicker">Fit</p>
+          <h2>{l.compat.title}</h2>
+          <p className="panel-body"><TodoText text={l.compat.body} /></p>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
+          <p className="kicker">Community</p>
+          <h2>{l.community.title}</h2>
+          <p className="panel-body">
+            {l.community.body}{' '}
+            <span className="footer-dead-link">
+              {l.community.linkLabel} <Todo>{l.community.linkTodo}</Todo>
+            </span>
+          </p>
         </div>
       </section>
 
@@ -211,7 +245,12 @@ export function DatasetsPage() {
           <p className="kicker">Stay close</p>
           <h2>{d.comingSoon.captureTitle}</h2>
           <div style={{ maxWidth: 520 }}>
-            <EmailCapture subject={d.comingSoon.subject} cta={d.comingSoon.cta} />
+            <EmailCapture
+              subject={d.comingSoon.subject}
+              cta={d.comingSoon.cta}
+              kind="notify"
+              successCopy="You’re on the list. First data, first email."
+            />
           </div>
         </div>
       </section>
@@ -223,6 +262,7 @@ export function DatasetsPage() {
 
 export function DevkitPage() {
   const k = DEVKIT;
+  useEffect(() => track('reserve_view'), []);
   return (
     <PageShell current="/devkit/">
       <PageHero kicker={k.kicker} title={k.h1} sub={<TodoText text={k.sub} />} />
@@ -265,13 +305,48 @@ export function DevkitPage() {
         </div>
       </section>
 
+      <section className="panel" id="compare">
+        <div className="panel-inner">
+          <p className="kicker">{k.compare.kicker}</p>
+          <h2>{k.compare.title}</h2>
+          <div className="compare-wrap">
+            <table className="compare-table">
+              <thead>
+                <tr>
+                  <th scope="col"><span className="visually-hidden">Feature</span></th>
+                  {k.compare.columns.map((c) => (
+                    <th scope="col" key={c} className={c === 'EMB-01' ? 'is-emb' : undefined}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {k.compare.rows.map((row) => (
+                  <tr key={row.feature}>
+                    <th scope="row">{row.feature}</th>
+                    {row.cells.map((cell, i) => (
+                      <td key={i} className={i === k.compare.columns.indexOf('EMB-01') ? 'is-emb' : undefined}>
+                        <TodoText text={cell} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="frame-caption">
+            {k.compare.priceLabel}<Fn ns={k.compare.priceFns} />
+          </p>
+          <p className="panel-body">{k.compare.caption}</p>
+        </div>
+      </section>
+
       <section className="panel" id="reserve">
         <div className="panel-inner">
           <p className="kicker">Batch One</p>
           <h2>{k.reserve.title}</h2>
-          <p className="panel-body">{k.reserve.body}</p>
+          <p className="panel-body"><TodoText text={k.reserve.body} /></p>
           <div style={{ maxWidth: 520 }}>
-            <EmailCapture subject={k.reserve.subject} cta={k.reserve.cta} />
+            <EmailCapture subject={k.reserve.subject} cta={k.reserve.cta} kind="reserve" />
           </div>
           <p className="capture-note" style={{ marginTop: 28 }}>
             <a href={MODULES_MAILTO}>{k.oemLine}</a>
@@ -293,21 +368,51 @@ export function StoryPage() {
       <section className="panel">
         <div className="panel-inner">
           <div className="story-prose">
-            {s.paragraphs.map((p) => <p key={p.slice(0, 24)}>{p}</p>)}
+            {s.body.map((p) => (
+              <p key={p.text.slice(0, 24)}>
+                {p.text}
+                {p.link && (
+                  <>
+                    <a href={p.link.href} target="_blank" rel="noreferrer">{p.link.label}</a>
+                    {p.after}
+                  </>
+                )}
+                {p.fns && <Fn ns={p.fns} base="" />}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel" id={s.whyNow.id}>
+        <div className="panel-inner">
+          <p className="kicker">{s.whyNow.kicker}</p>
+          <h2>{s.whyNow.title}</h2>
+          <div className="story-prose">
+            {s.whyNow.paragraphs.map((p) => (
+              <p key={p.text.slice(0, 24)}>
+                {p.text}
+                {p.fns && <Fn ns={p.fns} base="" />}
+              </p>
+            ))}
           </div>
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">Proof of work</p>
-          <h2>{s.proof.title}</h2>
-          <p className="panel-body">{s.proof.body}</p>
-          <div className="panel-cta">
-            <a className="btn btn-ghost" href={s.proof.href} target="_blank" rel="noreferrer">
-              {s.proof.cta}
-            </a>
+          <div className="stats-row story-stats">
+            {s.stats.tiles.map((t) => (
+              <div className="stat" key={t.value}>
+                <div className="stat-num">
+                  <span>{t.value}</span>
+                  <Fn ns={[t.fn]} base="" />
+                </div>
+                <div className="stat-label">{t.label} · {t.src}</div>
+              </div>
+            ))}
           </div>
+          <p className="frame-caption">{s.stats.note}</p>
         </div>
       </section>
 
@@ -316,7 +421,6 @@ export function StoryPage() {
           <p className="kicker">Founders</p>
           <h2>{s.founders.title}</h2>
           <p className="panel-body"><TodoText text={s.founders.body} /></p>
-          <p className="story-place">{s.founders.place}</p>
         </div>
       </section>
 
@@ -325,13 +429,26 @@ export function StoryPage() {
           <p className="story-closer">{s.closer}</p>
         </div>
       </section>
+
+      <section className="panel" id="sources">
+        <div className="panel-inner">
+          <p className="kicker">{s.sourcesTitle}</p>
+          <ol className="sources-list">
+            {SOURCES.map((src) => (
+              <li key={src.n} id={`source-${src.n}`}>
+                <a href={src.url} target="_blank" rel="noreferrer">{src.label}</a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
     </PageShell>
   );
 }
 
 /* ------------------------------------------------------------------------ */
 
-/** Shared conversion band for pages that don't end in their own capture. */
+/** Shared conversion band — the primary CTA only (the site has two CTAs, total). */
 function ReserveBand() {
   return (
     <section className="panel final-cta">
@@ -340,9 +457,6 @@ function ReserveBand() {
         <h2 className="cta-line">Get a head.</h2>
         <div className="hero-ctas">
           <a className="btn" href={CTA.primaryHref}>{CTA.primary}</a>
-          <a className="btn btn-ghost" href={BUILD_LOG_URL} target="_blank" rel="noreferrer">
-            Read the build log
-          </a>
         </div>
       </div>
     </section>

@@ -80,6 +80,25 @@ own meta/OG tags in its HTML shell; `public/robots.txt` + `public/sitemap.xml` c
 crawler plumbing. The 3D `<Scene>` mounts client-side only, so the prerender pass never
 touches three.js.
 
+## Forms, analytics, OG images
+
+- **Reserve / founding-lab / notify forms** POST to `api/reserve.js` (a Vercel serverless
+  function). Configure storage with env vars on Vercel: `SUPABASE_URL` +
+  `SUPABASE_SERVICE_ROLE_KEY` (inserts into a `reservations` table — see the comment in the
+  function for the schema) or `RESERVE_WEBHOOK_URL` (forwards JSON). Until one is configured
+  the endpoint returns 501 and the form falls back to a prefilled mailto, so no submission
+  is lost. A honeypot field silently drops bots; add a WAF/rate-limit rule before launch.
+- **Analytics** are first-party beacons to `api/event.js` (events: reserve_view,
+  reserve_submit, docs_click, lab_apply_submit, notify_submit, dataset_download_click,
+  demo_video_play). Set `ANALYTICS_WEBHOOK_URL` to receive them; unset, the endpoint 204s.
+  No cookies, no IDs.
+- **OG images** (`public/og/*.jpg`, 1200×630) are generated from the product stills in
+  `renders/` by `node scripts/og-images.mjs` — rerun after re-rendering stills.
+- **Market stats** on `/story` (and the home micro-stat) are footnoted to the numbered
+  sources list at `/story#sources` (`SOURCES` in `src/content/product.ts`); forecasts are
+  labeled as projections. Street prices in the dev-kit comparison table are labeled with
+  their as-of date — re-verify before each batch.
+
 ## Copy / content
 
 All shared + home copy (hero, chapters, nav, footer, spec table) lives in

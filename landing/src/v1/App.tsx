@@ -5,6 +5,7 @@ import { motion, requestRender } from '../lib/motion';
 import { EXTRACT_VECTORS } from '../three/parts';
 import { Callouts } from './Callouts';
 import { AfterTrack } from './Sections';
+import { track } from '../site/chrome';
 import {
   BRAND, PRODUCT_CODE, PRODUCT_NAME, HERO, PHILOSOPHY, STATS, CHAPTERS,
   NAV, CTA,
@@ -340,7 +341,11 @@ export function App() {
             <p className="hero-sub">{HERO.sub}</p>
             <div className="hero-ctas">
               <a className="btn" href={HERO.ctaPrimaryHref}>{HERO.ctaPrimary}</a>
-              <a className="btn btn-ghost" href={HERO.ctaSecondaryHref}>
+              <a
+                className="btn btn-ghost"
+                href={HERO.ctaSecondaryHref}
+                onClick={() => track('docs_click')}
+              >
                 {HERO.ctaSecondary}
               </a>
             </div>
