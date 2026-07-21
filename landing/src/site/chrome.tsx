@@ -117,7 +117,8 @@ export function SiteFooter() {
         )}
       </div>
       <div className="site-footer footer-meta">
-        <span>{BRAND} — {new Date().getFullYear()} · Tallinn, Estonia</span>
+        {/* build-time year is prerendered; suppress the mismatch if viewed in a later year */}
+        <span suppressHydrationWarning>{BRAND} — {new Date().getFullYear()} · Tallinn, Estonia</span>
         <span className="footer-note">{FOOTER_NOTE}</span>
         <a className="footer-modules" href={MODULES_MAILTO}>{FOOTER.modulesLine}</a>
       </div>

@@ -9,13 +9,9 @@ import {
 } from '../content/product';
 
 // 3D layer lazy-loaded so first paint = DOM + poster off a tiny bundle.
-// No window (build-time prerender): never resolve, so Suspense emits the
-// fallback and the 3D stack stays out of the SSR pass.
-const Scene = lazy(() =>
-  typeof window === 'undefined'
-    ? new Promise<never>(() => {})
-    : import('./Scene'),
-);
+// Rendered only after mount (see `mounted`), so the build-time prerender and
+// the client's hydration pass agree: neither renders the Suspense boundary.
+const Scene = lazy(() => import('./Scene'));
 
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
@@ -118,7 +114,10 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [ctxLost, setCtxLost] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const reduced = prefersReducedMotion();
+
+  useEffect(() => setMounted(true), []);
 
   // pointer parallax (subtle, desktop only)
   useEffect(() => {
@@ -308,19 +307,21 @@ export function App() {
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
-        <Suspense fallback={null}>
-          <Scene
-            reduced={reduced}
-            onLoaded={() => setLoaded(true)}
-            onCtxLost={() => setCtxLost(true)}
-            onPointerMissed={() => selected && select(null)}
-            onHoverObject={(obj) => setHovered(resolvePartFromObject(obj))}
-            onClickObject={(obj) => {
-              const id = resolvePartFromObject(obj);
-              if (id) select(id);
-            }}
-          />
-        </Suspense>
+        {mounted && (
+          <Suspense fallback={null}>
+            <Scene
+              reduced={reduced}
+              onLoaded={() => setLoaded(true)}
+              onCtxLost={() => setCtxLost(true)}
+              onPointerMissed={() => selected && select(null)}
+              onHoverObject={(obj) => setHovered(resolvePartFromObject(obj))}
+              onClickObject={(obj) => {
+                const id = resolvePartFromObject(obj);
+                if (id) select(id);
+              }}
+            />
+          </Suspense>
+        )}
       </div>
 
       <div className="grain" aria-hidden="true" />

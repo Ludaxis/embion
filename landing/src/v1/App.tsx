@@ -11,14 +11,11 @@ import {
 } from '../content/product';
 
 // The whole 3D layer is lazy so first paint = hero DOM + poster off a tiny
-// bundle; the ~three/drei/postprocessing chunk streams in after. During
-// build-time prerendering there is no window: never resolve, so the Suspense
-// boundary emits its fallback and the 3D stack stays out of the SSR pass.
-const Scene = lazy(() =>
-  typeof window === 'undefined'
-    ? new Promise<never>(() => {})
-    : import('./Scene'),
-);
+// bundle; the ~three/drei/postprocessing chunk streams in after. It renders
+// only after mount (see `mounted`), which also keeps the build-time prerender
+// and the client's hydration pass in agreement: neither renders the Suspense
+// boundary, so renderToString never emits an errored boundary marker.
+const Scene = lazy(() => import('./Scene'));
 
 gsap.registerPlugin(useGSAP);
 
@@ -53,8 +50,11 @@ const BEATS: { cam: [number, number, number]; look: [number, number, number] }[]
 export function App() {
   const [loaded, setLoaded] = useState(false);
   const [ctxLost, setCtxLost] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const reduced = prefersReducedMotion();
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (reduced) document.documentElement.classList.add('reduced');
@@ -315,13 +315,15 @@ export function App() {
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
-        <Suspense fallback={null}>
-          <Scene
-            reduced={reduced}
-            onLoaded={() => setLoaded(true)}
-            onCtxLost={() => setCtxLost(true)}
-          />
-        </Suspense>
+        {mounted && (
+          <Suspense fallback={null}>
+            <Scene
+              reduced={reduced}
+              onLoaded={() => setLoaded(true)}
+              onCtxLost={() => setCtxLost(true)}
+            />
+          </Suspense>
+        )}
       </div>
 
       <Callouts />

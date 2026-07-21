@@ -92,7 +92,7 @@ export const CHAPTERS: Chapter[] = [
     anchor: 'mic-b',
     kicker: '03 · Sound',
     title: 'Hears what it can’t see.',
-    body: 'Direction of sound, before line of sight. Three directional microphones place a voice behind your robot or a door around the corner by time-difference-of-arrival.',
+    body: 'Direction of sound, before line of sight. Three directional microphones place a voice behind your robot or a door closing around the corner by time-difference-of-arrival.',
     specs: ['3 directional mics', 'TDOA localization', 'spectrogram encoding'],
     side: 'left',
   },
@@ -100,7 +100,7 @@ export const CHAPTERS: Chapter[] = [
     id: 'camera',
     anchor: 'camera-ar0234',
     kicker: '04 · Vision',
-    title: 'Sees the scene.',
+    title: 'Sees at speed.',
     body: 'Sharp under motion, because robots move. A true global shutter captures 1920×1200 at up to 120 fps — no rolling-shutter smear, even at speed.',
     specs: ['1920 × 1200', '120 fps', 'global shutter'],
     side: 'right',
@@ -172,8 +172,8 @@ export const DATA_STORY = {
 
 /** Home — built for builders. */
 export const BUILDERS = {
-  kicker: 'Built for builders',
-  title: 'Three doors. One module.',
+  kicker: 'Who it’s for',
+  title: 'Built for builders.',
   cards: [
     {
       title: 'Researchers',
@@ -242,7 +242,7 @@ export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
     group: 'Interface',
     rows: [
       ['Output', 'Single composed video frame · HDMI → USB-C capture'],
-      ['Synchronization', 'On-device — all modalities share one frame clock · [TODO: sync precision]'],
+      ['Synchronization', 'Render-level, on-device — all modalities share one frame clock · [TODO: sync precision]'],
       ['Host requirements', 'Anything that reads a standard camera stream'],
     ],
   },

@@ -5,10 +5,11 @@
 /* ---------- visible [TODO] placeholders ---------- */
 .todo {
   font-family: var(--mono); font-size: 0.82em; letter-spacing: 0.02em;
-  color: var(--fg-muted); white-space: nowrap;
+  color: var(--fg-muted); overflow-wrap: anywhere;
   padding: 1px 8px 2px; border-radius: 6px;
   border: 1px dashed rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.03);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
 
 /* ---------- sub-page shell ---------- */
@@ -104,16 +105,16 @@ a.case-card { display: block; text-decoration: none; color: inherit; }
 .footer-modules { font-size: 12px; }
 
 /* ---------- prose sections on sub-pages ---------- */
-.panel h3 {
-  font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 600;
-  letter-spacing: -0.02em; margin-bottom: 10px;
-}
 .panel-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: clamp(28px, 4vw, 56px); margin-top: 56px;
 }
+.panel-grid h3 {
+  font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 600;
+  letter-spacing: -0.02em; margin-bottom: 10px;
+}
 .panel-grid p { color: var(--fg-muted); font-size: 15px; max-width: 30em; }
-.panel .code-card { margin-top: 40px; max-width: 720px; }
+.subpage .panel .code-card { margin-top: 40px; max-width: 720px; }
 .panel-cta { margin-top: 36px; display: flex; gap: 14px; flex-wrap: wrap; }
 
 /* plain lists (compatibility, what's in the box, what it isn't) */

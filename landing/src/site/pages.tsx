@@ -25,7 +25,7 @@ export function DevelopersPage() {
       <section className="panel">
         <div className="panel-inner">
           <p className="kicker">{d.quickstart.title}</p>
-          <h2>Thirty seconds to the first frame.</h2>
+          <h2>From cable to first frame.</h2>
           <div className="steps">
             {d.quickstart.steps.map((s, i) => (
               <div className="step" key={s.title}>
@@ -85,7 +85,7 @@ export function DevelopersPage() {
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">Honesty</p>
+          <p className="kicker">Limits</p>
           <h2>{d.isnt.title}</h2>
           <ul className="plain-list">
             {d.isnt.items.map((item) => (

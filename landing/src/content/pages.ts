@@ -33,11 +33,11 @@ sensor.record("episode_001")     # LeRobot-format episode`,
   },
   ros: {
     title: 'ROS 2 driver',
-    body: 'The stream arrives as a standard camera topic. A parser node splits it into per-modality topics — scan, IMU, image, range, audio. A reference driver is on the roadmap. [TODO: driver repo link]',
+    body: 'The stream arrives as a standard camera topic. A parser node splits it into per-modality topics — scan, IMU, image, range, audio. A reference driver is in development. [TODO: driver repo link]',
   },
   sdk: {
     title: 'Python SDK',
-    body: 'Read frames, decode modalities, record episodes, export LeRobotDataset. The SDK is not public yet; it ships with Batch One. [TODO: GitHub link]',
+    body: 'Read frames, decode modalities, record episodes, export LeRobotDataset. Not public yet. [TODO: GitHub link, release plan]',
   },
   format: {
     kicker: 'Stream format',
@@ -68,7 +68,7 @@ while True:
   },
   community: {
     title: 'Community',
-    body: 'The SDK, the ROS 2 driver, and the frame-layout spec will live in the open.',
+    body: 'Repo and community channels are on their way. Until then, the build log is the open window.',
     links: [
       { label: 'GitHub', todo: '[TODO: link]' },
       { label: 'Discord', todo: '[TODO: link]' },
@@ -88,15 +88,15 @@ while True:
 export const RESEARCH = {
   kicker: 'Research',
   h1: 'Synchronized multimodal ground truth, out of the box.',
-  sub: 'Five modalities on one clock, identical across units, exported to an open format. The capture rig disappears from your methods section.',
+  sub: 'Five modalities on one clock, exported to an open format. The capture rig disappears from your methods section.',
   themes: [
     {
       title: 'Per-modality timestamps',
-      body: 'Every reading carries its place on the shared device clock, so cross-modal alignment is a property of the capture — not a post-processing step. [TODO: timestamp resolution and sync spec]',
+      body: 'Every reading lands on the shared device clock at capture, so cross-modal alignment is a property of the recording — not a post-processing step. [TODO: timestamp resolution and sync spec]',
     },
     {
       title: 'Reproducible capture',
-      body: 'Same sensors, same geometry, same clock on every unit. A capture protocol written for one EMB-01 runs on any EMB-01.',
+      body: 'Same sensors, same clock, same stream layout, so a capture protocol written for one EMB-01 runs on another. [TODO: cross-unit calibration details]',
     },
     {
       title: 'Dataset export',
@@ -114,7 +114,7 @@ export const RESEARCH = {
   foundingLabs: {
     kicker: 'Founding Labs Program',
     title: 'Five labs. Five units.',
-    body: 'We support you directly; you break it and tell us how. Founding labs get hands-on support, direct input on the SDK and capture pipeline, and their work credited from day one.',
+    body: 'We support you directly; you break it and tell us how.',
     cta: 'Apply as a founding lab',
     subject: 'EMB-01 — founding lab application',
     note: `Applications by email. Tell us what you’d capture.`,
@@ -130,8 +130,8 @@ export const LEROBOT = {
     title: 'Compatibility',
     items: [
       'Any host that reads a camera reads EMB-01 — the same machine that runs your lerobot scripts.',
-      'Mounts above or beside the workspace, replacing the front / wrist / top webcam rig. [TODO: SO-101 mount details]',
-      'Exports LeRobotDataset episodes (Parquet + MP4). [TODO: confirm supported format version]',
+      'Designed to mount above or beside the workspace, replacing the front / wrist / top webcam rig. [TODO: SO-101 mount details]',
+      'LeRobotDataset export (Parquet + MP4). [TODO: confirm supported format version]',
     ],
   },
   example: {
@@ -171,7 +171,7 @@ export const DEVKIT = {
   },
   reserve: {
     title: 'Reserve yours.',
-    body: 'Reserving takes an email, not a payment. Batch One is allocated in order of the list.',
+    body: 'Reserving takes an email, not a payment. We fill Batch One in order of the list.',
     subject: 'EMB-01 dev kit — Batch One reservation',
     cta: 'Reserve a dev kit',
   },
@@ -186,7 +186,7 @@ export const STORY = {
     'EMB-01 replaces the rig. Five sensing modalities, hardware-synchronized on one device, delivered as a single stream any computer reads like a camera — and exported to LeRobot dataset format in one line.',
   ],
   proof: {
-    title: 'A year of proof of work.',
+    title: 'A year of building, documented.',
     body: 'Designing, printing, assembling, programming — and then doing it again. Every step is documented in a public build log: the dead ends, the reprints, the working module.',
     cta: 'Read the build log',
     href: BUILD_LOG_URL,

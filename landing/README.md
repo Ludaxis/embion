@@ -7,6 +7,7 @@ optimized 3D model and one copy source.
 |---|---|---|
 | `/` | **01 · Noir** | Dark cinematic, Apple-style scroll storytelling. Scroll-scrubbed camera flight through 7 sensor chapters with part extraction, per-chapter accent effects (LiDAR sweep, mic pulse rings, ToF depth grid), fusion turntable finale. |
 | `/v3/` | **02 · Explorer** | Dark interactive annotated diagram. Every component labeled with hairline leader lines; hover highlights, click extracts the part from the assembly while the camera flies to it and a glass description card opens (single viewport, no scroll). |
+| `/developers/` `/research/` `/lerobot/` `/datasets/` `/devkit/` `/story/` | Sub-pages | Static pages sharing the Noir design system (`src/site/`): docs-first developer page, research + Founding Labs, LeRobot community page, datasets, dev-kit reservation, and the company story. |
 | `/render/` | Render rig | Internal tool for high-res product stills (see below). |
 
 (The former 02 "Blueprint" light exploded-view version was removed; `/v2/` redirects to `/v3/`.)
@@ -69,7 +70,23 @@ Produces the marketing stills in `renders/` (4K PNGs) via a small save-server.
 Shots: `hero`, `hero-v2`, `three-quarter`, `three-quarter-r`, `front`, `top`, `back`,
 `lidar`, `camera`. Add `bg=transparent` for packshot-style transparent captures.
 
+## Prerendering / SEO
+
+`pnpm build` runs `vite build` then `scripts/prerender.mjs`, which renders every page's
+React tree to static HTML (`src/ssg/entry-server.tsx`) and injects it into the built
+`dist/**/index.html`. Every page — including the two 3D experiences — serves its full copy
+without JavaScript; the client entries hydrate the same tree on load. Each page carries its
+own meta/OG tags in its HTML shell; `public/robots.txt` + `public/sitemap.xml` cover the
+crawler plumbing. The 3D `<Scene>` mounts client-side only, so the prerender pass never
+touches three.js.
+
 ## Copy / content
 
-All product copy, specs, FAQ and CTAs live in `src/content/product.ts` — edit once, both
-versions update. Contact + build-log links are at the top of that file.
+All shared + home copy (hero, chapters, nav, footer, spec table) lives in
+`src/content/product.ts`; sub-page copy lives in `src/content/pages.ts` — edit once, every
+version updates. Contact + build-log links are at the top of `product.ts`. Unknown specs,
+prices and dates are visible `[TODO: …]` placeholders by design — replace them with real
+values as they land, never with guesses. Shared page chrome (header/nav, footer, email
+capture, code cards) is `src/site/chrome.tsx`; sub-page sections are `src/site/pages.tsx`
+with additive styles in `src/site/pages.css` (the Noir design tokens in `src/v1/styles.css`
+are the base and are unchanged).
