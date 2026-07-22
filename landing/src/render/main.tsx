@@ -32,9 +32,10 @@ const noFx = params.get('fx') === '0';
 const modelUrl = params.get('model') ?? undefined; // e.g. /models/module-new.glb
 
 const SHOTS: Record<string, { cam: [number, number, number]; look: [number, number, number]; fov?: number }> = {
-  // matches the LIVE V1 hero beat (BEATS[0] in src/v1/App.tsx) so the poster
-  // crossfades seamlessly into frame 1 of the real scene
-  hero: { cam: [-0.35, 0.05, -5.8], look: [0.42, 0, 0] },
+  // matches the LIVE V1 hero beats (heroPose() in src/v1/App.tsx) so the
+  // posters crossfade seamlessly into frame 1 of the real scene
+  hero: { cam: [-0.2, 0.1, -6.0], look: [1.15, 0.02, 0] },
+  'hero-portrait': { cam: [0, 0.1, -7.0], look: [0, 0.55, 0] },
   // matches the V3 Explorer OVERVIEW pose (src/v3/App.tsx)
   'v3-overview': { cam: [0, 0.4, -5.9], look: [0, 0.28, 0] },
   // matches the V2 hero beat

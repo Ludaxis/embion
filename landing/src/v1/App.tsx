@@ -24,6 +24,42 @@ const Scene = lazy(() => scenePromise!);
 
 gsap.registerPlugin(useGSAP);
 
+/** Aspect-aware hero framing. Wide screens: the module sits clearly in the
+ *  RIGHT half, fully clear of the left text column. Portrait phones: the text
+ *  is full-width on top, so the module centers in the lower two-thirds.
+ *  Interpolated between aspect 0.8 (portrait pose) and 1.5 (wide pose). */
+function heroPose(): { cam: [number, number, number]; look: [number, number, number] } {
+  const a = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 1.7;
+  const t = Math.min(1, Math.max(0, (a - 0.8) / 0.7));
+  const l = (p: number, q: number) => p + (q - p) * t;
+  return {
+    cam: [l(0, -0.2), 0.1, l(-7.0, -6.0)],
+    look: [l(0, 1.15), l(0.55, 0.02), 0],
+  };
+}
+
+/** Portrait screens see a much narrower horizontal field (fixed vertical
+ *  FOV) — dolly chapter close-ups OUT and lift the aim so featured parts stay
+ *  in frame above the bottom-sheet card instead of cropping off-screen. */
+function portraitComp(): { dolly: number; lift: number } {
+  const a = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 1.7;
+  const t = Math.min(1, Math.max(0, (1.05 - a) / 0.55)); // 0 at ≥1.05, 1 at ≤0.5
+  return { dolly: 1 + 0.32 * t, lift: 0.14 * t };
+}
+function applyComp(
+  pose: { cam: { x: number; y: number; z: number }; look: { x: number; y: number; z: number } },
+) {
+  const { dolly, lift } = portraitComp();
+  if (dolly === 1) return pose;
+  const { cam, look } = pose;
+  cam.x = look.x + (cam.x - look.x) * dolly;
+  cam.y = look.y + (cam.y - look.y) * dolly;
+  cam.z = look.z + (cam.z - look.z) * dolly;
+  look.y += lift;
+  cam.y += lift;
+  return pose;
+}
+
 /** Extraction-adjusted chapter shot (same math the scrub timeline uses). */
 function staticTarget(b: { cam: [number, number, number]; look: [number, number, number] }, i: number) {
   const cam = vec(b.cam);
@@ -39,7 +75,7 @@ function staticTarget(b: { cam: [number, number, number]; look: [number, number,
 
 /** Camera beats: hero, manifesto, then one per chapter. Front of device = -z. */
 const BEATS: { cam: [number, number, number]; look: [number, number, number] }[] = [
-  { cam: [-0.35, 0.05, -5.8], look: [0.42, 0.0, 0] },    // hero
+  { cam: [-0.2, 0.1, -6.0], look: [1.15, 0.02, 0] },   // hero (wide default — see heroPose)
   { cam: [0.6, 0.5, -5.7], look: [0, 0.1, 0] },        // manifesto (recede + dim)
   { cam: [-1.35, 1.15, -1.95], look: [0.03, 0.62, -0.55] },  // lidar
   { cam: [0.95, 1.9, -1.4], look: [0.02, 0.92, -0.58] },     // imu
@@ -95,11 +131,12 @@ export function App() {
   useGSAP(
     () => {
       if (!loaded) return;
+      const HERO = heroPose();
       if (reduced) {
         // Static mode: no smoothing, no scrub — each chapter instantly
         // composes its shot so the page still tells the story.
-        gsap.set(motion.cam, vec(BEATS[0].cam));
-        gsap.set(motion.look, vec(BEATS[0].look));
+        gsap.set(motion.cam, vec(HERO.cam));
+        gsap.set(motion.look, vec(HERO.look));
         requestRender();
         gsap.utils.toArray<HTMLElement>('.chapter').forEach((section, ci) => {
           const anchor = section.dataset.anchor!;
@@ -113,7 +150,7 @@ export function App() {
               motion.extractName = anchor !== 'chassis-upper' ? anchor : '';
               motion.extract = anchor !== 'chassis-upper' ? 0.55 : 0;
               const b = BEATS[ci + 2];
-              const { cam, look } = staticTarget(b, ci + 2);
+              const { cam, look } = applyComp(staticTarget(b, ci + 2));
               gsap.set(motion.cam, cam);
               gsap.set(motion.look, look);
               requestRender();
@@ -130,8 +167,8 @@ export function App() {
             motion.focus = '';
             motion.extractName = '';
             motion.extract = 0;
-            gsap.set(motion.cam, vec(BEATS[0].cam));
-            gsap.set(motion.look, vec(BEATS[0].look));
+            gsap.set(motion.cam, vec(HERO.cam));
+            gsap.set(motion.look, vec(HERO.look));
             requestRender();
           },
         });
@@ -150,12 +187,12 @@ export function App() {
       const introCam = gsap.fromTo(
         motion.cam,
         { x: 0.9, y: 1.7, z: -6.8 },
-        { ...vec(BEATS[0].cam), delay: 0.35, duration: 2.4, ease: 'power2.out' },
+        { ...vec(HERO.cam), delay: 0.35, duration: 2.4, ease: 'power2.out' },
       );
       const introLook = gsap.fromTo(
         motion.look,
         { x: 0, y: 0.4, z: 0 },
-        { ...vec(BEATS[0].look), delay: 0.35, duration: 2.4, ease: 'power2.out' },
+        { ...vec(HERO.look), delay: 0.35, duration: 2.4, ease: 'power2.out' },
       );
       gsap.set(motion.cam, { x: 0.9, y: 1.7, z: -6.8 }); // pose the covered frame
       gsap.from(['.hero-kicker', 'h1 > span', '.hero-sub', '.hero-ctas', '.scroll-hint'], {
@@ -194,8 +231,8 @@ export function App() {
               // timeline while active, then expire — no overwrite, so the
               // timeline's own tweens are never killed.
               if (self.progress < 0.06) {
-                gsap.to(motion.cam, { ...vec(BEATS[0].cam), duration: 0.4, ease: 'power2.out' });
-                gsap.to(motion.look, { ...vec(BEATS[0].look), duration: 0.4, ease: 'power2.out' });
+                gsap.to(motion.cam, { ...vec(HERO.cam), duration: 0.4, ease: 'power2.out' });
+                gsap.to(motion.look, { ...vec(HERO.look), duration: 0.4, ease: 'power2.out' });
               }
             }
           },
@@ -228,7 +265,8 @@ export function App() {
           look.y += ev[1] * EXTRACT_K * 0.85;
           look.z += ev[2] * EXTRACT_K * 0.85;
         }
-        return { cam, look };
+        // i>=2 are part close-ups; hero/manifesto handle their own framing
+        return i >= 2 ? applyComp({ cam, look }) : { cam, look };
       };
       BEATS.forEach((b, i) => {
         if (i === 0) return;
@@ -241,13 +279,13 @@ export function App() {
           // immediateRender:false so the posed covered frame isn't stomped.
           tl.fromTo(
             motion.cam,
-            vec(BEATS[0].cam),
+            vec(HERO.cam),
             { ...cam, duration: 0.6, ease: 'power2.inOut', immediateRender: false },
             i - 0.6,
           );
           tl.fromTo(
             motion.look,
-            vec(BEATS[0].look),
+            vec(HERO.look),
             { ...look, duration: 0.6, ease: 'power2.inOut', immediateRender: false },
             i - 0.6,
           );
@@ -416,14 +454,19 @@ export function App() {
 
       {/* Fixed 3D layer */}
       <div className="canvas-layer" aria-hidden="true">
-        <img
-          className="poster"
-          src="/posters/poster-dark.webp"
-          alt=""
-          fetchPriority="high"
-          onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
-          style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
-        />
+        <picture>
+          {/* portrait phones get a portrait-composed poster (cover-cropping the
+              16:9 shot pushed the module half off-frame) */}
+          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/poster-dark-portrait.webp" />
+          <img
+            className="poster"
+            src="/posters/poster-dark.webp"
+            alt=""
+            fetchPriority="high"
+            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+            style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
+          />
+        </picture>
         {mounted && (
           <SceneBoundary
             onFail={() => {

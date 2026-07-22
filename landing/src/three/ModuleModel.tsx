@@ -55,6 +55,11 @@ export function ModuleModel({
   // never leak through the global useGLTF cache (shared across pages).
   const cloned = useMemo(() => {
     const c = scene.clone(true);
+    // The v3 hybrid ships the new export's ROUGH camera assembly co-located
+    // with the grafted finished camera — showing both z-fights in the camera
+    // bay. The finished part (camera-ar0234, real lens) wins.
+    const rough = c.getObjectByName('frame-detail');
+    if (rough) rough.visible = false;
     const seen = new Map<THREE.Material, THREE.Material>();
     c.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
@@ -388,7 +393,7 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
   // Baseline env energy ~1.0: envMapIntensity is LIVE now (materials bind
   // the baked environment), so values here are absolute, not aspirational.
   let env = 1.0;
-  if (name.startsWith('3D Print Filament')) {
+  if (name.startsWith('3D Print Filament') || name.startsWith('Rough Plastic')) {
     // Hero body — printed polymer as warm graphite, the brightest large
     // surface on the value ladder. Dielectric with a clearcoat micro-sheen.
     out = toPhysical(mat, {
@@ -498,6 +503,38 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     out = toPhysical(mat, { roughness: 0.5, metalness: 0.05, clearcoat: 0.2 });
     out.color = new THREE.Color('#8f939b');
     env = 0.9;
+  } else if (name.startsWith('Brushed Steel Procedural')) {
+    // v3 bolts — machined steel: true metal, brushed roughness.
+    out = toPhysical(mat, { roughness: 0.35, metalness: 1 });
+    out.color = new THREE.Color('#3a3d44');
+    env = 1.4;
+  } else if (name === 'Material.022') {
+    // v3 standoffs — turned aluminium spacers.
+    out = toPhysical(mat, { roughness: 0.45, metalness: 0.9 });
+    out.color = new THREE.Color('#2c2f36');
+    env = 1.4;
+  } else if (name === 'Material.012' || name === 'Material.018') {
+    // v3 ToF carrier plate — one of the pair carries a retailer board photo:
+    // seat it like tof-board; the untextured one reads as dark polymer.
+    if (mat.map) {
+      out = toPhysical(mat, { roughness: 0.5, metalness: 0.05, clearcoat: 0.2 });
+      out.color = new THREE.Color('#8f939b');
+      env = 0.9;
+    } else {
+      out = toPhysical(mat, {
+        roughness: 0.48,
+        metalness: 0,
+        clearcoat: 0.3,
+        clearcoatRoughness: 0.35,
+      });
+      out.color = new THREE.Color('#1a1c22');
+    }
+  } else if (/^(FF|BE|66)[0-9A-F]{6}(\.\d+)?$/.test(name)) {
+    // v3 exposed-PCB components (hex-named CAD colors: connectors, caps,
+    // headers, a red LED body, blue jack…). Keep their identity but seat them
+    // into the grade: slightly tamed albedo, matte dielectric finish.
+    out = toPhysical(mat, { roughness: 0.45, metalness: 0.05, clearcoat: 0.15 });
+    out.color = mat.color.clone().multiplyScalar(0.8);
   }
 
   out.envMapIntensity = dark ? env : 1.1;

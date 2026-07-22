@@ -22,6 +22,14 @@ const Scene = lazy(() => scenePromise!);
  *  look.y sits above center so the model drops below the page title. */
 const OVERVIEW = { cam: [0, 0.4, -5.9] as const, look: [0, 0.28, 0] as const };
 
+/** Portrait screens: pull part close-ups further back so the extracted part
+ *  clears the bottom-sheet card (narrow horizontal field at fixed vFOV). */
+function portraitPull(): number {
+  const a = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 1.7;
+  const t = Math.min(1, Math.max(0, (1.05 - a) / 0.55));
+  return 1 + 0.3 * t;
+}
+
 /** Camera pose shifted toward where the part sits once extracted, pulled
  *  back ~12% for breathing room around the subject. */
 function extractedPose(part: ExplorePart) {
@@ -31,7 +39,7 @@ function extractedPose(part: ExplorePart) {
     part.pose.look[1] + v[1] * 0.75,
     part.pose.look[2] + v[2] * 0.75,
   ] as const;
-  const PULL = 1.28;
+  const PULL = 1.28 * portraitPull();
   const cam = [
     look[0] + (part.pose.cam[0] + v[0] * 0.55 - look[0]) * PULL,
     look[1] + (part.pose.cam[1] + v[1] * 0.55 - look[1]) * PULL,
@@ -100,6 +108,8 @@ const NODE_TO_PART: Record<string, string> = {
   jetson: 'jetson',
   'housing-rear': 'jetson',
   'shell-rear': 'jetson',
+  'pcb-core': 'jetson', // exposed carrier PCB → compute chapter
+  'mount-detail': 'tof', // ToF carrier plate → ToF chapter
 };
 
 const partById = (id: string | null) => PARTS.find((p) => p.id === id) ?? null;

@@ -1,7 +1,10 @@
 // Plain-data part geometry — no three/drei imports, so the DOM/scroll layer can
 // read EXTRACT_VECTORS etc. without dragging the 3D bundle into the main chunk.
 
-/** Part slugs present in the GLB (node names). */
+/** Part slugs present in the GLB (node names). v3 adds the hybrid model's
+ *  mechanical detail (exposed PCB, ToF carrier, standoffs, 16 bolts) so every
+ *  part participates in focus dimming. ('frame-detail' — the rough duplicate
+ *  camera assembly — is intentionally absent: ModuleModel hides it.) */
 export const PART_NAMES = [
   'mount-top',
   'chassis-upper',
@@ -16,6 +19,13 @@ export const PART_NAMES = [
   'mic-a',
   'mic-b',
   'mic-c',
+  'pcb-core',
+  'mount-detail',
+  'standoff-a',
+  'standoff-b',
+  'standoff-c',
+  'standoff-d',
+  ...Array.from({ length: 16 }, (_, i) => `bolt-${String(i + 1).padStart(2, '0')}`),
 ] as const;
 
 /** Which parts light up together when a chapter focuses one anchor. */
@@ -24,8 +34,8 @@ export const FOCUS_GROUPS: Record<string, string[]> = {
   imu: ['imu'],
   'mic-b': ['mic-a', 'mic-b', 'mic-c'],
   'camera-ar0234': ['camera-ar0234'],
-  'tof-8x8': ['tof-8x8'],
-  jetson: ['jetson', 'housing-rear'],
+  'tof-8x8': ['tof-8x8', 'mount-detail'], // carrier plate lights with its board
+  jetson: ['jetson', 'housing-rear', 'pcb-core'],
   'chassis-upper': [...PART_NAMES],
 };
 
