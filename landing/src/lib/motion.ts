@@ -19,6 +19,11 @@ export const motion = {
   extract: 0,
   /** node name of the focused part, '' = none */
   focus: '',
+  /** node name of the pointer-hovered part (v3), '' = none */
+  hoverName: '',
+  /** idle-life amplitude 0..1 — micro yaw/bob + emissive breathing.
+   *  Pages set 0 for reduced-motion. */
+  idle: 1,
   /** pointer parallax input, -1..1 */
   pointer: { x: 0, y: 0 },
   /** parallax amplitude, radians-ish world units */

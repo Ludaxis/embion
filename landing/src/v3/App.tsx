@@ -3,16 +3,20 @@ import { Vector3, Quaternion, type Object3D } from 'three';
 import gsap from 'gsap';
 import { motion, screenAnchors, requestRender } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
+import { getBootState, reportProgress, finishBoot } from '../lib/loadProgress';
 import { EXTRACT_VECTORS } from '../three/parts';
+import { Preloader } from '../site/Preloader';
+import { SceneBoundary } from '../site/SceneBoundary';
 import { VersionSwitch } from '../site/chrome';
 import {
   BRAND, PRODUCT_CODE, CHAPTERS, NAV, CTA,
 } from '../content/product';
 
-// 3D layer lazy-loaded so first paint = DOM + poster off a tiny bundle.
-// Rendered only after mount (see `mounted`), so the build-time prerender and
-// the client's hydration pass agree: neither renders the Suspense boundary.
-const Scene = lazy(() => import('./Scene'));
+// 3D chunk download kicked at module-eval (parallel with hydration + the
+// head-preloaded GLB). Browser-gated for the SSG pass; Scene still renders
+// only after mount so prerender and hydration agree.
+const scenePromise = typeof window !== 'undefined' ? import('./Scene') : null;
+const Scene = lazy(() => scenePromise!);
 
 /** Overview pose — model centered, front-facing, like the annotated diagram.
  *  look.y sits above center so the model drops below the page title. */
@@ -113,12 +117,41 @@ function resolvePartFromObject(obj: Object3D | null): string | null {
 export function App() {
   const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered, setHoveredState] = useState<string | null>(null);
   const [ctxLost, setCtxLost] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Card display state is decoupled from selection so the glass panel can
+  // animate OUT (and crossfade its content on part switches) instead of
+  // hard-cutting while the camera glides back.
+  const [displayed, setDisplayed] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const swapRef = useRef<HTMLDivElement>(null);
+  const prevDisplayedRef = useRef<string | null>(null);
+  const leaveTimerRef = useRef(0);
+  const extractSeqRef = useRef<gsap.core.Timeline | null>(null);
   const reduced = prefersReducedMotion();
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (reduced) document.documentElement.classList.add('reduced');
+    motion.idle = reduced ? 0 : 1;
+  }, [reduced]);
+
+  // Boot progress before the 3D chunk reports real bytes.
+  useEffect(() => {
+    reportProgress(0.04, 'boot');
+    scenePromise?.then(() => reportProgress(0.12, 'scene'));
+    const id = setInterval(() => {
+      const s = getBootState();
+      if (s.phase !== 'boot' || s.value >= 0.1) {
+        clearInterval(id);
+        return;
+      }
+      reportProgress(s.value + 0.008);
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
 
   // pointer parallax (subtle, desktop only)
   useEffect(() => {
@@ -127,12 +160,13 @@ export function App() {
     const onMove = (e: PointerEvent) => {
       motion.pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       motion.pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
+      requestRender(); // full-rate parallax under the demand frameloop
     };
     window.addEventListener('pointermove', onMove, { passive: true });
     return () => window.removeEventListener('pointermove', onMove);
   }, []);
 
-  // initial pose + intro drift
+  // initial pose + intro drift; the boot overlay lifts as the drift begins
   useEffect(() => {
     if (!loaded) return;
     motion.look.x = OVERVIEW.look[0];
@@ -143,14 +177,27 @@ export function App() {
       motion.cam.y = OVERVIEW.cam[1];
       motion.cam.z = OVERVIEW.cam[2];
       requestRender(); // demand-mode: force the static overview frame
+      finishBoot();
       return;
     }
     gsap.fromTo(
       motion.cam,
       { x: 0.4, y: 1.1, z: -5.3 },
-      { x: OVERVIEW.cam[0], y: OVERVIEW.cam[1], z: OVERVIEW.cam[2], duration: 1.7, ease: 'power3.out' },
+      {
+        x: OVERVIEW.cam[0], y: OVERVIEW.cam[1], z: OVERVIEW.cam[2],
+        delay: 0.3, duration: 2.1, ease: 'power2.out',
+      },
     );
+    gsap.set(motion.cam, { x: 0.4, y: 1.1, z: -5.3 });
+    finishBoot();
   }, [loaded, reduced]);
+
+  /** hover: DOM state + the 3D material lift share one entry point */
+  const setHovered = useCallback((id: string | null) => {
+    setHoveredState(id);
+    motion.hoverName = id ? partById(id)?.anchor ?? '' : '';
+    requestRender();
+  }, []);
 
   const flyRef = useRef<{ proxy: { t: number } } | null>(null);
 
@@ -172,13 +219,14 @@ export function App() {
       const b = to.clone().sub(pivot);
       const angle = a.angleTo(b);
       const wide = !reduced && angle >= 0.9;
-      // Aim and position settle on the SAME frame (was 1.25 vs 1.5 → the shot
-      // "arrived twice"); the wide arc gets a touch longer for the extra travel.
+      // Aim and position settle on the SAME frame with the SAME velocity
+      // profile (the wide orbit runs power2.inOut, so the look tween must
+      // too, or the subject drifts off-frame mid-arc).
       const dur = wide ? d * 1.2 : d;
 
       gsap.to(motion.look, {
         x: pose.look[0], y: pose.look[1], z: pose.look[2],
-        duration: dur, ease: 'power3.inOut',
+        duration: dur, ease: wide ? 'power2.inOut' : 'power3.inOut',
       });
 
       if (!wide) {
@@ -190,9 +238,7 @@ export function App() {
       }
 
       // Wide swing: a TRUE constant-radius orbit around the module — slerp the
-      // pivot-relative offset direction and lerp the radius separately. (The old
-      // quadratic bezier pushed the control point to 1.18× radius, so the camera
-      // bulged out then back in and the subject visibly shrank mid-move.)
+      // pivot-relative offset direction and lerp the radius separately.
       const lenA = a.length();
       const lenB = b.length();
       const dirA = a.clone().normalize();
@@ -226,35 +272,81 @@ export function App() {
       setSelected(id);
       setHovered(null);
       const part = partById(id);
-      gsap.killTweensOf(motion, 'extract');
+      // One owner for the extraction sequence: killing the whole timeline also
+      // kills any pending .call(), which used to survive killTweensOf and pop
+      // the WRONG part out during rapid clicks.
+      extractSeqRef.current?.kill();
+      const seq = gsap.timeline();
+      extractSeqRef.current = seq;
+      // any user drag eases home so selection poses stay calibrated
+      gsap.to(motion, { spinDrag: 0, duration: reduced ? 0 : 0.8, ease: 'power3.out' });
       if (part) {
         motion.focus = part.anchor;
-        // extraction: tuck the previous part back in, then slide this one out
         const switching =
           motion.extractName && motion.extractName !== part.anchor && motion.extract > 0.01;
-        const tl = gsap.timeline();
         if (switching) {
-          tl.to(motion, { extract: 0, duration: reduced ? 0 : 0.5, ease: 'power2.inOut' });
-          tl.call(() => { motion.extractName = part.anchor; });
+          seq.to(motion, { extract: 0, duration: reduced ? 0 : 0.5, ease: 'power2.inOut' });
+          seq.call(() => { motion.extractName = part.anchor; });
         } else {
           motion.extractName = part.anchor;
         }
-        tl.to(
+        seq.to(
           motion,
-          // Decisive, non-springy: a rigid machined part shouldn't bounce like a
-          // UI toast. (was back.out(1.15) — the overshoot read toy-like.)
-          { extract: 1, duration: reduced ? 0 : 1.1, ease: 'power3.out' },
+          // decisive machined move: fast break-away, firm level arrival
+          { extract: 1, duration: reduced ? 0 : 1.05, ease: 'embMech' },
           switching ? '>' : 0.3,
         );
         flyTo(extractedPose(part));
       } else {
         motion.focus = '';
-        gsap.to(motion, { extract: 0, duration: reduced ? 0 : 0.9, ease: 'power3.inOut' });
+        seq.to(motion, { extract: 0, duration: reduced ? 0 : 0.9, ease: 'power3.inOut' });
         flyTo(OVERVIEW);
       }
+
+      // ---- card display choreography ----
+      window.clearTimeout(leaveTimerRef.current);
+      if (id) {
+        setLeaving(false);
+        if (displayed && displayed !== id && swapRef.current && !reduced) {
+          // crossfade content inside the persistent glass shell; kill any
+          // in-flight swap tween first so rapid clicks can't queue stale
+          // setDisplayed calls or fight the fade-in
+          gsap.killTweensOf(swapRef.current);
+          gsap.to(swapRef.current, {
+            autoAlpha: 0,
+            y: -8,
+            duration: 0.16,
+            ease: 'power1.in',
+            overwrite: 'auto',
+            onComplete: () => setDisplayed(id),
+          });
+        } else {
+          setDisplayed(id);
+        }
+      } else if (displayed) {
+        setLeaving(true);
+        leaveTimerRef.current = window.setTimeout(() => {
+          setDisplayed(null);
+          setLeaving(false);
+        }, reduced ? 0 : 280);
+      }
     },
-    [flyTo, reduced],
+    [flyTo, reduced, displayed, setHovered],
   );
+
+  // content fade-in after a crossfade swap (not on first mount — the card's
+  // own entrance animation covers that)
+  useEffect(() => {
+    const prev = prevDisplayedRef.current;
+    prevDisplayedRef.current = displayed;
+    if (!displayed || !prev || prev === displayed || !swapRef.current || reduced) return;
+    gsap.killTweensOf(swapRef.current);
+    gsap.fromTo(
+      swapRef.current,
+      { autoAlpha: 0, y: 10 },
+      { autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out', overwrite: 'auto' },
+    );
+  }, [displayed, reduced]);
 
   // Esc closes
   useEffect(() => {
@@ -274,13 +366,56 @@ export function App() {
     [selected, select],
   );
 
-  const selectedPart = partById(selected);
+  // ---- drag-to-orbit (overview only) ----
+  const dragRef = useRef({ active: false, lastX: 0, moved: 0, captured: false });
+  const canDrag = !selected && !reduced;
+  const onDragDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (!canDrag || !loaded) return;
+      dragRef.current = { active: true, lastX: e.clientX, moved: 0, captured: false };
+      gsap.killTweensOf(motion, 'spinDrag');
+    },
+    [canDrag, loaded],
+  );
+  const onDragMove = useCallback((e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d.active) return;
+    const dx = e.clientX - d.lastX;
+    d.lastX = e.clientX;
+    d.moved += Math.abs(dx);
+    // Capture only once it's clearly a drag: capturing on pointerdown would
+    // retarget pointerup away from the canvas and kill R3F click selection;
+    // capturing here keeps the drag alive across the overlay UI it crosses.
+    if (!d.captured && d.moved > 4) {
+      d.captured = true;
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    }
+    motion.spinDrag += dx * 0.005;
+    requestRender();
+  }, []);
+  const onDragEnd = useCallback(() => {
+    const d = dragRef.current;
+    if (!d.active) return;
+    d.active = false;
+    // ease home so labels/poses stay calibrated; a tap (no travel) does nothing
+    gsap.to(motion, { spinDrag: 0, duration: 1.6, ease: 'power3.out', delay: 0.6 });
+    // the click event (if any) fires after pointerup in the same task —
+    // clear the drag flag right after so it can't suppress FUTURE clicks
+    setTimeout(() => {
+      dragRef.current.moved = 0;
+    }, 0);
+  }, []);
+  /** clicks that were actually drags must not select a part */
+  const wasDrag = () => dragRef.current.moved > 6;
+
+  const displayedPart = partById(displayed);
 
   return (
     <div
-      className={`explorer ${selected ? 'has-selection' : ''} ${hovered ? 'has-hover' : ''}`}
+      className={`explorer ${selected ? 'has-selection' : ''} ${hovered ? 'has-hover' : ''} ${canDrag ? 'can-drag' : ''}`}
       data-hovered={hovered ?? ''}
     >
+      <Preloader brand={BRAND} />
       <header className="site-header">
         <a className="brand" href="/v3/">
           {BRAND}<span className="brand-dot">·</span><span className="brand-code">{PRODUCT_CODE}</span>
@@ -296,32 +431,50 @@ export function App() {
       <div className="stage-title">
         <p className="kicker">Hardware</p>
         <h1>Compute platform + sensors.</h1>
-        <p className="stage-sub">Click any component to explore it.</p>
+        <p className="stage-sub">Click any component to explore it. Drag to rotate.</p>
       </div>
 
-      <div className="canvas-layer">
+      <div
+        className="canvas-layer"
+        onPointerDown={onDragDown}
+        onPointerMove={onDragMove}
+        onPointerUp={onDragEnd}
+        onPointerLeave={onDragEnd}
+      >
         <img
           className="poster"
-          src="/posters/poster-dark.webp"
+          src="/posters/poster-v3.webp"
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           style={{ opacity: loaded && !ctxLost ? 0 : 1 }}
         />
         {mounted && (
-          <Suspense fallback={null}>
-            <Scene
-              reduced={reduced}
-              onLoaded={() => setLoaded(true)}
-              onCtxLost={() => setCtxLost(true)}
-              onPointerMissed={() => selected && select(null)}
-              onHoverObject={(obj) => setHovered(resolvePartFromObject(obj))}
-              onClickObject={(obj) => {
-                const id = resolvePartFromObject(obj);
-                if (id) select(id);
-              }}
-            />
-          </Suspense>
+          <SceneBoundary
+            onFail={() => {
+              // degraded mode: poster + labels stay; the overlay lifts
+              setCtxLost(true);
+              setLoaded(true);
+            }}
+          >
+            <Suspense fallback={null}>
+              <Scene
+                reduced={reduced}
+                onLoaded={() => setLoaded(true)}
+                onCtxLost={() => setCtxLost(true)}
+                onCtxRestored={() => setCtxLost(false)}
+                onPointerMissed={() => !wasDrag() && selected && select(null)}
+                onHoverObject={(obj) => {
+                  if (!dragRef.current.active) setHovered(resolvePartFromObject(obj));
+                }}
+                onClickObject={(obj) => {
+                  if (wasDrag()) return;
+                  const id = resolvePartFromObject(obj);
+                  if (id) select(id);
+                }}
+              />
+            </Suspense>
+          </SceneBoundary>
         )}
       </div>
 
@@ -329,28 +482,35 @@ export function App() {
 
       <Callouts hovered={hovered} onHover={setHovered} onSelect={select} />
 
-      {/* description card */}
-      {selectedPart && (
-        <aside className="part-card" key={selectedPart.id} aria-live="polite">
+      {/* description card — persistent shell, animated exit, content crossfade */}
+      {displayedPart && (
+        <aside className={`part-card ${leaving ? 'leaving' : ''}`} aria-live="polite">
           <button className="card-close" onClick={() => select(null)} aria-label="Back to overview">
             ×
           </button>
-          <p className="kicker">{chapterFor(selectedPart).kicker}</p>
-          <h2>{chapterFor(selectedPart).title}</h2>
-          <p className="card-body">{chapterFor(selectedPart).body}</p>
-          <ul className="card-specs">
-            {chapterFor(selectedPart).specs.map((s) => <li key={s}>{s}</li>)}
-          </ul>
+          <div className="card-swap" ref={swapRef}>
+            <p className="kicker">{chapterFor(displayedPart).kicker}</p>
+            <h2>{chapterFor(displayedPart).title}</h2>
+            <p className="card-body">{chapterFor(displayedPart).body}</p>
+            <ul className="card-specs">
+              {chapterFor(displayedPart).specs.map((s) => <li key={s}>{s}</li>)}
+            </ul>
+          </div>
           <div className="card-nav">
             <button onClick={() => step(-1)} aria-label="Previous component">←</button>
-            <span>{PARTS.findIndex((p) => p.id === selected) + 1} / {PARTS.length}</span>
+            <span>
+              {Math.max(1, PARTS.findIndex((p) => p.id === (selected ?? displayed)) + 1)} / {PARTS.length}
+            </span>
             <button onClick={() => step(1)} aria-label="Next component">→</button>
           </div>
         </aside>
       )}
 
-      {selected && (
-        <button className="overview-pill" onClick={() => select(null)}>
+      {displayedPart && (
+        <button
+          className={`overview-pill ${leaving ? 'leaving' : ''}`}
+          onClick={() => select(null)}
+        >
           ← Overview
         </button>
       )}
@@ -477,4 +637,3 @@ function Callouts({
     </div>
   );
 }
-

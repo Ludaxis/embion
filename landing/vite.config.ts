@@ -5,6 +5,10 @@ import { resolve } from 'node:path';
 export default defineConfig({
   plugins: [react()],
   build: {
+    // .vite/manifest.json: prerender.mjs uses it to inject modulepreload links
+    // for the lazy 3D chunk graph (Scene/three/drei/postprocessing) so those
+    // fetches start at HTML parse instead of after hydration.
+    manifest: true,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -17,6 +21,10 @@ export default defineConfig({
         v3: resolve(__dirname, 'v3/index.html'),
         render: resolve(__dirname, 'render/index.html'),
       },
+      // NOTE: no manualChunks — Vite's natural split already isolates three
+      // and postprocessing into their own lazy chunks; both object and
+      // function forms were tried and each pulled React into the post chunk,
+      // making every subpage statically parse ~210 kB gz of postprocessing.
     },
   },
 });

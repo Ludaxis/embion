@@ -2,28 +2,25 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
+import { computeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
 import { motion } from '../lib/motion';
+import { pickModelUrl } from '../lib/pickModel';
 import { PART_NAMES, FOCUS_GROUPS, EXPLODE, EXTRACT_VECTORS } from './parts';
 
 export { PART_NAMES, EXPLODE, EXTRACT_VECTORS } from './parts';
+export { MODEL_URL, MODEL_URL_MOBILE } from '../lib/pickModel';
 
-export const MODEL_URL = '/models/module.glb';
-export const MODEL_URL_MOBILE = '/models/module-mobile.glb';
+// Accelerated raycasts (v3 hover/click picking against ~300k tris). The
+// prototype patch is global but inert until a geometry gets a boundsTree —
+// meshes without one fall back to three's stock raycast. (three-mesh-bvh's
+// type augmentation declares these members on three's own interfaces.)
+THREE.BufferGeometry.prototype.computeBoundsTree =
+  computeBoundsTree as unknown as typeof THREE.BufferGeometry.prototype.computeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
-/** Pick the light mobile mesh (57k tris / 1.7 MB vs 120k / 3.7 MB) on likely-weak
- *  or touch devices. Synchronous so the preload + first fetch use the right URL.
- *  Same normalization + node names as desktop, so camera presets and part
- *  extraction are identical. */
-function pickModelUrl(): string {
-  if (typeof matchMedia !== 'function') return MODEL_URL;
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  const coarse = matchMedia('(pointer: coarse)').matches;
-  const weak =
-    (nav.deviceMemory != null && nav.deviceMemory <= 4) ||
-    (nav.hardwareConcurrency != null && nav.hardwareConcurrency <= 4);
-  return coarse || weak ? MODEL_URL_MOBILE : MODEL_URL;
-}
 export const DEFAULT_MODEL_URL = pickModelUrl();
+// Fallback kick for entries without the HTML-level preload (dev, render rig);
+// on the real pages this resolves instantly from the head <link rel=preload>.
 useGLTF.preload(DEFAULT_MODEL_URL);
 
 /** Live registry so overlays can project real (spun/exploded) positions.
@@ -41,9 +38,16 @@ type Props = {
   dimStyle?: 'darken' | 'fade';
   /** override the GLB URL (render rig comparison: ?model=…) */
   url?: string;
+  /** build BVH acceleration for pointer picking (v3) */
+  bvhRaycast?: boolean;
 };
 
-export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_URL }: Props) {
+export function ModuleModel({
+  theme,
+  dimStyle = 'darken',
+  url = DEFAULT_MODEL_URL,
+  bvhRaycast = false,
+}: Props) {
   const { scene } = useGLTF(url);
   const rootRef = useRef<THREE.Group>(null);
 
@@ -65,9 +69,32 @@ export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_UR
     return c;
   }, [scene, theme]);
 
+  // BVH build is deferred off the mount path; geometries are shared with the
+  // useGLTF cache so the tree is built once per asset, never disposed here.
+  useEffect(() => {
+    if (!bvhRaycast) return;
+    let cancelled = false;
+    const build = () => {
+      if (cancelled) return;
+      cloned.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        if (!mesh.geometry.boundsTree) mesh.geometry.computeBoundsTree();
+      });
+    };
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number })
+      .requestIdleCallback;
+    const id = idle ? idle(build) : window.setTimeout(build, 300);
+    return () => {
+      cancelled = true;
+      if (!idle) clearTimeout(id as number);
+    };
+  }, [cloned, bvhRaycast]);
+
   type PartState = {
     obj: THREE.Object3D;
     basePos: THREE.Vector3;
+    baseRotZ: number;
     explodeLocal: THREE.Vector3;
     extractLocal: THREE.Vector3;
     materials: {
@@ -75,8 +102,11 @@ export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_UR
       baseColor: THREE.Color;
       baseEnv: number;
       baseEmissive: number;
+      /** the LiDAR window breathes (idle "powered-on" pulse) */
+      pulse: boolean;
     }[];
     dim: number; // damped 0..1 (1 = fully present)
+    settled: boolean; // dim reached target → skip material writes
   };
 
   const parts = useMemo(() => {
@@ -102,6 +132,7 @@ export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_UR
             baseColor: (mat.color ?? new THREE.Color('#ffffff')).clone(),
             baseEnv: mat.envMapIntensity ?? 1,
             baseEmissive: mat.emissiveIntensity ?? 0,
+            pulse: (mat.emissiveIntensity ?? 0) >= 0.3,
           });
           if (dimStyle === 'fade') {
             mat.transparent = true;
@@ -114,10 +145,12 @@ export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_UR
       map.set(name, {
         obj,
         basePos: obj.position.clone(),
+        baseRotZ: obj.rotation.z,
         explodeLocal: new THREE.Vector3(ex[0], ex[1], ex[2]).divideScalar(rootScale),
         extractLocal: new THREE.Vector3(exv[0], exv[1], exv[2]).divideScalar(rootScale),
         materials,
         dim: 1,
+        settled: false,
       });
       cloned.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(obj);
@@ -135,48 +168,143 @@ export function ModuleModel({ theme, dimStyle = 'darken', url = DEFAULT_MODEL_UR
   );
 
   const dimTarget = dimStyle === 'fade' ? 0.14 : 0.45;
+  const boundEnv = useRef<THREE.Texture | null>(null);
+  const prevPose = useRef({ explode: NaN, extract: NaN, name: '' });
 
   useFrame((state, dt) => {
+    const t = state.clock.elapsedTime;
+
+    // three r176 gotcha: material.envMapIntensity only uploads when
+    // material.envMap is SET — materials lit purely via scene.environment get
+    // the flat scene.environmentIntensity instead, making the whole env
+    // ladder, focus dimming's env component, and the hover lift dead writes.
+    // Bind the baked environment once it exists (same resolved texture → same
+    // program, no recompile). Runs in useFrame because drei <Environment>
+    // populates scene.environment only after its first baked frame.
+    const env = state.scene.environment;
+    if (env !== boundEnv.current) {
+      boundEnv.current = env;
+      cloned.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const m of mats) {
+          const sm = m as THREE.MeshStandardMaterial;
+          if (sm.isMeshStandardMaterial) sm.envMap = env;
+        }
+      });
+      state.invalidate();
+    }
     // Spin around the cloned scene root — its origin is the world origin.
     // (product-root carries the centering translation, so rotating IT would
-    // swing the model on a 12-unit arm.)
-    cloned.rotation.y = motion.spin + motion.spinDrag;
+    // swing the model on a 12-unit arm.) The tiny sin terms are idle life:
+    // the module should never read as a still image (gated off for
+    // reduced-motion via motion.idle = 0).
+    const idle = motion.idle;
+    cloned.rotation.y = motion.spin + motion.spinDrag + Math.sin(t * 0.22) * 0.014 * idle;
+    cloned.position.y = Math.sin(t * 0.4) * 0.006 * idle;
 
     const focusSet = motion.focus ? FOCUS_GROUPS[motion.focus] ?? [motion.focus] : null;
+    const hoverSet = motion.hoverName
+      ? FOCUS_GROUPS[motion.hoverName] ?? [motion.hoverName]
+      : null;
 
     const extractSet =
       motion.extractName && motion.extractName !== 'chassis-upper'
         ? FOCUS_GROUPS[motion.extractName] ?? [motion.extractName]
         : null;
 
+    // `moving` is a per-frame DELTA, not a level: a held extraction (v3 keeps
+    // extract=1 for minutes) must not re-invalidate every frame, and an
+    // instant 0-duration reset (reduced motion) must still get its one
+    // seat-back write even when every dim is already settled.
+    const pp = prevPose.current;
+    const moving =
+      motion.explode !== pp.explode ||
+      motion.extract !== pp.extract ||
+      motion.extractName !== pp.name;
+    pp.explode = motion.explode;
+    pp.extract = motion.extract;
+    pp.name = motion.extractName;
+    let unsettled = false;
+
     for (const [name, p] of parts) {
-      // global exploded view + single-part extraction (separate vectors:
-      // extraction follows a collision-free escape path)
-      p.obj.position
-        .copy(p.basePos)
-        .addScaledVector(p.explodeLocal, easeInOut(motion.explode));
-      if (extractSet && extractSet.includes(name)) {
-        p.obj.position.addScaledVector(p.extractLocal, easeInOut(motion.extract));
+      // global exploded view + single-part extraction. Explode keeps the
+      // smoothstep shaping (it is scrubbed linearly by scroll); extraction is
+      // applied RAW — GSAP owns its curve, and stacking smoothstep on top of
+      // power-out easing made arrivals die into an imperceptible creep.
+      if (moving || !p.settled) {
+        p.obj.position
+          .copy(p.basePos)
+          .addScaledVector(p.explodeLocal, easeInOut(motion.explode));
+        p.obj.rotation.z = p.baseRotZ;
+        if (extractSet && extractSet.includes(name)) {
+          p.obj.position.addScaledVector(p.extractLocal, motion.extract);
+          // a whisper of secondary motion: parts ride rails, arriving level
+          p.obj.rotation.z = p.baseRotZ + Math.sin(motion.extract * Math.PI) * 0.02;
+        }
       }
 
-      // focus dimming
-      const target = !focusSet || focusSet.includes(name) ? 1 : dimTarget;
-      p.dim = THREE.MathUtils.damp(p.dim, target, 6, dt);
-      for (const { mat, baseColor, baseEnv, baseEmissive } of p.materials) {
-        if (dimStyle === 'fade') {
-          mat.opacity = p.dim;
-        } else {
-          // Dim reflections + emissive, not just albedo: a near-black part is
-          // defined by its env reflection, so scaling colour alone barely dims it.
-          mat.envMapIntensity = baseEnv * p.dim;
-          if (baseEmissive) mat.emissiveIntensity = baseEmissive * p.dim;
-          if (mat.color) mat.color.copy(baseColor).multiplyScalar(0.5 + 0.5 * p.dim);
+      // focus dimming + hover lift (hover reads as a specular wake-up)
+      const hovered = hoverSet?.includes(name) ?? false;
+      const focusTarget = !focusSet || focusSet.includes(name) ? 1 : dimTarget;
+      const target = hovered ? Math.max(focusTarget, 1.12) : focusTarget;
+
+      if (Math.abs(p.dim - target) < 1e-3) {
+        if (!p.settled) {
+          p.dim = target;
+          writeDim(p, dimStyle);
+          p.settled = true;
+        }
+      } else {
+        p.dim = THREE.MathUtils.damp(p.dim, target, hovered ? 9 : 6, dt);
+        writeDim(p, dimStyle);
+        p.settled = false;
+        unsettled = true;
+      }
+
+      // powered-on breathing on the LiDAR IR window (cheap: 1 material)
+      if (idle > 0) {
+        for (const m of p.materials) {
+          if (m.pulse) {
+            m.mat.emissiveIntensity =
+              m.baseEmissive * p.dim * (1 + 0.28 * Math.sin(t * 1.3)) * idle;
+          }
         }
       }
     }
+
+    // Demand-frameloop support: keep frames coming while damps settle or a
+    // move is in flight. (No-op when frameloop is 'always'.)
+    if (unsettled || moving) state.invalidate();
   });
 
   return <primitive ref={rootRef} object={cloned} />;
+}
+
+function writeDim(
+  p: {
+    dim: number;
+    materials: {
+      mat: THREE.MeshStandardMaterial;
+      baseColor: THREE.Color;
+      baseEnv: number;
+      baseEmissive: number;
+    }[];
+  },
+  dimStyle: 'darken' | 'fade',
+) {
+  for (const { mat, baseColor, baseEnv, baseEmissive } of p.materials) {
+    if (dimStyle === 'fade') {
+      mat.opacity = Math.min(1, p.dim);
+    } else {
+      // Dim reflections + emissive, not just albedo: a near-black part is
+      // defined by its env reflection, so scaling colour alone barely dims it.
+      mat.envMapIntensity = baseEnv * p.dim;
+      if (baseEmissive) mat.emissiveIntensity = baseEmissive * p.dim;
+      if (mat.color) mat.color.copy(baseColor).multiplyScalar(0.5 + 0.5 * Math.min(p.dim, 1));
+    }
+  }
 }
 
 function easeInOut(t: number) {
@@ -211,9 +339,15 @@ function toPhysical(
 /**
  * The Blender source used procedural shaders that don't survive glTF export
  * (the 3D-print filament falls back to plain white). Rebuild the finishes to
- * read like a premium product shot: tonal layering between parts, clearcoat
- * micro-sheen on the printed chassis, glossy optics, a faint emitter glow in
- * the LiDAR window.
+ * read like a premium product shot. Dark-grade principles:
+ *  (a) reflectance CHARACTER separates parts — dielectric polymer (matte +
+ *      clearcoat sheen) vs true metal, never muddy mid-metalness;
+ *  (b) a real VALUE ladder — graphite chassis on top, rear shells a step
+ *      below, black metals at the bottom;
+ *  (c) ONE hue — green PCB soldermask — signalling "electronics";
+ *  (d) visible EMISSIVE on the optical windows so the module reads powered-on.
+ * NOTE: these values are tuned against the AgX tonemap (see Composer.tsx —
+ * the ToneMapping effect keeps AgX active on composer tiers).
  */
 function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light') {
   const name = mat.name ?? '';
@@ -251,37 +385,36 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     return mat;
   }
 
-  // Dark grade. Subsystems must READ apart on a busy rig, so parts separate by
-  //  (a) reflectance CHARACTER — dielectric polymer (matte + clearcoat sheen)
-  //      vs true metal (metalness 1, bright specular), not muddy mid-metalness;
-  //  (b) a small VALUE spread — graphite chassis a step above the black metals;
-  //  (c) one HUE — green PCB soldermask — as the only colour, signalling
-  //      "electronics"; and (d) faint EMISSIVE on the optical windows so the
-  //  sensors read as active. envMapIntensity carries the studio on the metals.
-  let env = 1.6;
+  // Baseline env energy ~1.0: envMapIntensity is LIVE now (materials bind
+  // the baked environment), so values here are absolute, not aspirational.
+  let env = 1.0;
   if (name.startsWith('3D Print Filament')) {
-    // Hero body — printed polymer as warm graphite, a clear value step above the
-    // black metal parts. Dielectric (metalness 0) with a clearcoat micro-sheen.
+    // Hero body — printed polymer as warm graphite, the brightest large
+    // surface on the value ladder. Dielectric with a clearcoat micro-sheen.
     out = toPhysical(mat, {
       roughness: 0.46,
       metalness: 0,
       clearcoat: 0.5,
       clearcoatRoughness: 0.32,
     });
-    out.color = new THREE.Color('#191b21');
+    out.color = new THREE.Color('#1e222a');
   } else if (name === 'Material.023') {
-    // LiDAR puck body — turned/anodised gunmetal: TRUE metal but rough enough to
-    // scatter the studio into a soft brushed sheen, not a hot chrome mirror.
+    // LiDAR puck body — turned/anodised gunmetal: TRUE metal, rough enough to
+    // scatter the studio into a soft brushed sheen. Reflection energy (env 2.0)
+    // carries it above the chassis in highlight, below in shadow.
+    // (No anisotropy: the mesh has no UVs, so the tangent frame is degenerate —
+    // the long streak Lightformer paints the brushed highlight instead.)
     out = toPhysical(mat, {
       roughness: 0.52,
       metalness: 1,
       clearcoat: 0.25,
       clearcoatRoughness: 0.4,
-      anisotropy: 0.45,
     });
     out.color = new THREE.Color('#16181e');
+    env = 1.5;
   } else if (name === 'Material.024') {
-    // LiDAR cap window — piano-black metal + a faint IR-emitter glow.
+    // LiDAR cap window — piano-black metal + a FELT IR-emitter glow (breathes
+    // at idle, see ModuleModel useFrame; feeds Bloom on composer tiers).
     out = toPhysical(mat, {
       roughness: 0.1,
       metalness: 1,
@@ -290,10 +423,11 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     });
     out.color = new THREE.Color('#0a0a0e');
     out.emissive = new THREE.Color('#2a0800');
-    out.emissiveIntensity = 0.35;
+    out.emissiveIntensity = 0.32;
+    env = 1.2;
   } else if (name === 'Black scratched plastic') {
-    // AR0234 housing — matte dark polymer; keep the roughness/normal breakup,
-    // only drop the crushed diffuse (it read as a flat silhouette).
+    // AR0234 housing — matte dark polymer, lifted a step so the small part
+    // reads against the chassis.
     out = toPhysical(mat, {
       roughness: 0.46,
       metalness: 0,
@@ -301,11 +435,12 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
       clearcoatRoughness: 0.34,
     });
     out.map = null;
-    out.color = new THREE.Color('#26272e');
+    out.color = new THREE.Color('#2b2d35');
   } else if (name === 'Glass dark') {
-    // Camera lens — a DIELECTRIC optic, not black chrome: metalness 0 so Fresnel
-    // + a strong env reflection define the glass, plus a whisper of emissive
-    // sheen. (Real transmission renders black over the transparent canvas.)
+    // Camera lens — a DIELECTRIC optic, not black chrome: metalness 0 so
+    // Fresnel + a strong env reflection define the glass, plus a whisper of
+    // emissive sheen. (Real transmission renders black over the transparent
+    // canvas.)
     out = toPhysical(mat, {
       roughness: 0.05,
       metalness: 0,
@@ -318,28 +453,51 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     out.emissiveIntensity = 0.16;
     out.transparent = false;
     out.opacity = 1;
-    env = 2.6; // reflections carry the optic
+    env = 2.0; // reflections carry the optic
   } else if (name === 'AR3DMat PBR Black Plastic') {
-    // Rear housing — dielectric polymer; keep its normal map.
+    // Rear housing — dielectric polymer, a clear step DARKER than the chassis
+    // so the rear shell reads as a layer behind it.
     out = toPhysical(mat, {
       metalness: 0,
       clearcoat: 0.3,
       clearcoatRoughness: 0.45,
       roughness: 0.5,
     });
-    out.color = new THREE.Color('#191a20');
+    out.color = new THREE.Color('#14151a');
   } else if (name === 'Black leather') {
     // Jetson shell — 'leather' is a placeholder; read it honestly as a brushed
-    // aluminium heat-spreader (true metal) rather than fabric.
+    // aluminium heat-spreader. Albedo up + env 2.0: the metal read comes from
+    // reflection energy, not paint.
     out = toPhysical(mat, { roughness: 0.5, metalness: 0.9, clearcoat: 0 });
     out.map = null;
     out.normalMap = null;
     out.roughnessMap = null;
-    out.color = new THREE.Color('#24272f');
+    out.color = new THREE.Color('#292d36');
+    env = 1.5;
   } else if (name === 'Material.025') {
-    // IMU board — the ONE hue: green PCB soldermask, so "electronics" reads.
+    // IMU board — the ONE hue: green PCB soldermask, bright enough to survive
+    // AgX desaturation as an actual green.
     out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.3 });
-    out.color = new THREE.Color('#0f2417');
+    out.color = new THREE.Color('#163823');
+  } else if (name === 'mic') {
+    // The source texture is a retailer product-listing photo (purple PCB,
+    // marketing banner + logo). Kill it: the mic boards join the PCB-green
+    // family; the capsule reads via geometry.
+    out = toPhysical(mat, {
+      roughness: 0.42,
+      metalness: 0.05,
+      clearcoat: 0.25,
+      clearcoatRoughness: 0.35,
+    });
+    out.map = null;
+    out.color = new THREE.Color('#121e17');
+  } else if (name === 'tof-board') {
+    // DFRobot marketing shot — keep the PCB component detail but seat it hard:
+    // multiply the photo down so gold pads stop glowing and the silkscreen
+    // branding recedes to invisibility.
+    out = toPhysical(mat, { roughness: 0.5, metalness: 0.05, clearcoat: 0.2 });
+    out.color = new THREE.Color('#8f939b');
+    env = 0.9;
   }
 
   out.envMapIntensity = dark ? env : 1.1;

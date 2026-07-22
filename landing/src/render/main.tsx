@@ -3,9 +3,16 @@ import { createRoot } from 'react-dom/client';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
 import * as THREE from 'three';
-import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, N8AO, ToneMapping } from '@react-three/postprocessing';
+import { ToneMappingMode } from 'postprocessing';
 import { ModuleModel } from '../three/ModuleModel';
 import { Stage } from '../three/Stage';
+import { SensorFX } from '../three/SensorFX';
+import { motion } from '../lib/motion';
+
+// Stills: no idle life — no yaw/bob drift between capture frames, no idle
+// LiDAR sweep ring in poster compositions, steady LED intensity.
+motion.idle = 0;
 
 /**
  * Offline render rig for high-quality stills.
@@ -25,8 +32,11 @@ const noFx = params.get('fx') === '0';
 const modelUrl = params.get('model') ?? undefined; // e.g. /models/module-new.glb
 
 const SHOTS: Record<string, { cam: [number, number, number]; look: [number, number, number]; fov?: number }> = {
-  // matches the V1 hero beat
-  hero: { cam: [-0.3, 0.02, -4.45], look: [0.42, 0.02, 0] },
+  // matches the LIVE V1 hero beat (BEATS[0] in src/v1/App.tsx) so the poster
+  // crossfades seamlessly into frame 1 of the real scene
+  hero: { cam: [-0.35, 0.05, -5.8], look: [0.42, 0, 0] },
+  // matches the V3 Explorer OVERVIEW pose (src/v3/App.tsx)
+  'v3-overview': { cam: [0, 0.4, -5.9], look: [0, 0.28, 0] },
   // matches the V2 hero beat
   'hero-v2': { cam: [-2.35, 0.42, -4.35], look: [0.28, 0, 0] },
   'three-quarter': { cam: [-2.6, 0.9, -3.1], look: [0, -0.02, 0] },
@@ -62,6 +72,31 @@ function Capturer({ onReady, composerRef }: { onReady: () => void; composerRef: 
       // fully-composited render (AO/bloom/vignette) in a hidden/throttled tab.
       (window as unknown as { __composer: unknown }).__composer = composerRef.current;
       onReady();
+      // ?post=1 → POST the frame to a local capture sink (headless automation:
+      // download clicks don't work there, and data-URLs can't be ferried out).
+      if (params.get('post') === '1') {
+        setTimeout(() => {
+          // Explicit GL submission before readback: timer-driven/headless
+          // pages may never run the R3F loop, and the backbuffer reads black
+          // without it. Render twice so ping-pong AO/bloom targets settle.
+          const w = window as unknown as {
+            __scene?: THREE.Scene;
+            __cam?: THREE.Camera;
+          };
+          const comp = composerRef.current as { render?: (dt: number) => void } | null;
+          for (let i = 0; i < 2; i++) {
+            if (comp?.render) comp.render(0.016);
+            else if (w.__scene && w.__cam) gl.render(w.__scene, w.__cam);
+          }
+          gl.domElement.toBlob((blob) => {
+            if (!blob) return;
+            fetch(`http://localhost:9977/shot?name=${encodeURIComponent(name)}`, {
+              method: 'POST',
+              body: blob,
+            }).then(() => { document.title = 'POSTED'; });
+          }, 'image/png');
+        }, 1200);
+      }
       if (!capture) return;
       setTimeout(() => {
         const url = gl.domElement.toDataURL('image/png');
@@ -120,11 +155,17 @@ function App() {
         <Suspense fallback={null}>
           <Stage theme={theme} floor={theme === 'dark' && params.get('floor') !== '0' ? 'reflect' : 'none'} bakeFrames={Infinity} />
           <ModuleModel theme={theme} url={modelUrl} />
+          {/* status LEDs etc. — posters must match frame 1 of the live pages */}
+          {theme === 'dark' && !noFx && <SensorFX accent="#ff4d00" />}
+          {/* mirrors the live Composer stack (three/Composer.tsx): the AGX
+              ToneMapping effect is mandatory — EffectComposer disables the
+              renderer's own tonemap — and the vignette lives in page CSS, so
+              captures here get none (add it in post if a still needs it) */}
           {theme === 'dark' && !noFx && (
             <EffectComposer ref={composerRef as never} multisampling={4}>
               <N8AO aoRadius={0.5} intensity={3.8} distanceFalloff={0.5} />
-              <Bloom mipmapBlur luminanceThreshold={0.9} intensity={0.62} />
-              <Vignette darkness={0.55} offset={0.22} />
+              <Bloom mipmapBlur luminanceThreshold={1} luminanceSmoothing={0.3} intensity={0.5} />
+              <ToneMapping mode={ToneMappingMode.AGX} />
             </EffectComposer>
           )}
           <Capturer composerRef={composerRef} onReady={() => setReady(true)} />

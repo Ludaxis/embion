@@ -27,8 +27,9 @@ function HowItWorks() {
           <p className="kicker">{HOW_IT_WORKS.kicker}</p>
         </div>
         <div className="steps">
+          {/* items cascade via the grid-level stagger in App, not .reveal */}
           {HOW_IT_WORKS.steps.map((s, i) => (
-            <div className="step reveal" key={s.title}>
+            <div className="step" key={s.title}>
               <span className="step-index">{String(i + 1).padStart(2, '0')}</span>
               <h3>{s.title}</h3>
               <p>{s.body}</p>
@@ -108,8 +109,9 @@ function BuiltForBuilders() {
           <h2>{BUILDERS.title}</h2>
         </div>
         <div className="cases-grid">
+          {/* items cascade via the grid-level stagger in App, not .reveal */}
           {BUILDERS.cards.map((c, i) => (
-            <a className="case-card reveal" key={c.title} href={c.href}>
+            <a className="case-card" key={c.title} href={c.href}>
               <span className="case-index">{String(i + 1).padStart(2, '0')}</span>
               <h3>{c.title}</h3>
               <p>{c.body}</p>

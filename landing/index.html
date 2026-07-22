@@ -18,6 +18,34 @@
     <meta property="og:url" content="https://embion.vercel.app/" />
     <meta property="og:image" content="https://embion.vercel.app/og/home.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Boot sequence, must run at HTML parse:
+      // 1. Lock scroll while the boot overlay is up (removed by the app when the
+      //    3D scene is fully ready, or by the failsafe below). The reveal always
+      //    starts at the hero, so scroll restoration is disabled.
+      // 2. Start the GLB download NOW — in parallel with all JS — instead of
+      //    after main-chunk + hydration + Scene-chunk (the old serial waterfall).
+      //    Heuristic mirrors src/lib/pickModel.ts; keep them in sync.
+      (function () {
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        var d = document.documentElement;
+        d.classList.add('booting');
+        d.classList.add('js'); // gates JS-only initial-hidden states in CSS
+        setTimeout(function () { d.classList.remove('booting'); }, 15000);
+        var n = navigator;
+        var weak =
+          matchMedia('(pointer: coarse)').matches ||
+          (n.deviceMemory != null && n.deviceMemory <= 4) ||
+          (n.hardwareConcurrency != null && n.hardwareConcurrency <= 4);
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'fetch';
+        l.crossOrigin = 'anonymous'; // matches three FileLoader: mode cors + same-origin creds
+        l.setAttribute('fetchpriority', 'high');
+        l.href = weak ? '/models/module-mobile-v2.glb' : '/models/module-v2.glb';
+        document.head.appendChild(l);
+      })();
+    </script>
     <link rel="preload" as="image" href="/posters/poster-dark.webp" />
     <link
       rel="icon"

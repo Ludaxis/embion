@@ -22,7 +22,8 @@
     "postprocessing": "^6.39.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "three": "^0.176.0"
+    "three": "^0.176.0",
+    "three-mesh-bvh": "^0.9.13"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.4.1",

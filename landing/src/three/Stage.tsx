@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, MeshReflectorMaterial } from '@react-three/drei';
 
@@ -16,11 +16,20 @@ type Props = {
  * Dark: warm key + cool rim/streaks (color contrast reads cinematic on black).
  * Light: bright, even, neutral — technical-catalogue look.
  */
-export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
+// memo: drei's ContactShadows/Environment re-bake after EVERY re-render (their
+// frame counters live in the component body), so a Scene re-render mid-scroll
+// would capture a transient extracted/spun pose as the permanent baked shadow.
+// Props are stable after mount; key={ctxGen} still forces a context-restore
+// rebake (key beats memo).
+export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
   const scene = useThree((s) => s.scene);
 
   useEffect(() => {
-    scene.environmentIntensity = theme === 'dark' ? 1.3 : 1.1;
+    // The MODEL's materials bind the env map directly (ModuleModel) and carry
+    // their own envMapIntensity ladder — this global only reaches unbound
+    // materials, i.e. the reflector floor. Keep it low or the floor washes
+    // out the composition under AgX.
+    scene.environmentIntensity = theme === 'dark' ? 0.4 : 1.1;
   }, [scene, theme]);
 
   return (
@@ -28,7 +37,8 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
       {theme === 'dark' && floor === 'reflect' && (
         <fog attach="fog" args={['#0a0a0b', 7.5, 15]} />
       )}
-      <Environment resolution={512} frames={bakeFrames} background={false}>
+      {/* 256 is plenty for low-frequency softboxes and bakes ~4× faster */}
+      <Environment resolution={256} frames={bakeFrames} background={false}>
         {theme === 'dark' ? (
           <>
             {/* soft top gradient — a slow falloff down the body reads as anodized */}
@@ -41,14 +51,15 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
               scale={[10, 8, 1]}
             />
             {/* warm key — large soft box, upper front-left. Leads the scene so the
-                body gets a sculpted key→fill gradient (not just lit edges). */}
+                body gets a sculpted key→fill gradient (not just lit edges).
+                Bright enough to clearly lead the rims. */}
             <Lightformer
               form="rect"
               color="#fff2dc"
-              intensity={4.8}
+              intensity={5.2}
               position={[-4.2, 4.2, -3.2]}
               rotation={[-Math.PI / 2.6, -Math.PI / 7, 0]}
-              scale={[8, 5.5, 1]}
+              scale={[9, 6, 1]}
             />
             {/* neutral front fill — sensors face -z; keeps front faces off pure black */}
             <Lightformer
@@ -156,24 +167,29 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
           <planeGeometry args={[18, 18]} />
           <MeshReflectorMaterial
             blur={[300, 110]}
-            resolution={1024}
+            resolution={512}
             mixBlur={1}
             mixStrength={16}
-            roughness={0.9}
+            roughness={0.95}
             depthScale={1}
             minDepthThreshold={0.35}
             maxDepthThreshold={1.4}
-            color="#050506"
+            color="#030304"
             metalness={0.5}
-            mirror={0.62}
+            mirror={0.55}
+            envMapIntensity={0.35}
           />
         </mesh>
       )}
 
       <ContactShadows
-        frames={bakeFrames}
+        // Live on the high tier so the floor shadow tracks the fusion
+        // turntable + part extraction instead of freezing in the baked shape;
+        // slightly stronger when there is no reflector floor to ground the
+        // module on the flat backdrop.
+        frames={floor === 'reflect' ? Infinity : bakeFrames}
         position={[0, theme === 'dark' ? -1.115 : -1.12, 0]}
-        opacity={theme === 'dark' ? 0.72 : 0.34}
+        opacity={theme === 'dark' ? (floor === 'reflect' ? 0.72 : 0.8) : 0.34}
         scale={6.5}
         blur={2.2}
         far={2.2}
@@ -182,4 +198,4 @@ export function Stage({ theme, floor = 'none', bakeFrames = 1 }: Props) {
       />
     </>
   );
-}
+});

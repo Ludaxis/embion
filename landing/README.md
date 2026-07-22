@@ -39,19 +39,29 @@ pnpm preview    # serve dist/
 
 ## 3D model pipeline
 
-Source: `../path_planner_module.glb` (152 MB, ~4M tris, Blender export)
-→ `public/models/module.glb` (**8.8 MB, ~300k tris**, meshopt-compressed).
+Source: `../path_planner_module.glb` (152 MB, ~1.65M tris, Blender export)
+→ `public/models/module-v2.glb` (**3.0 MB, ~298k tris**, desktop) and
+`public/models/module-mobile-v2.glb` (**1.2 MB, ~129k tris**, coarse-pointer /
+low-spec devices — picked by `src/lib/pickModel.ts` and the inline preload
+script in each page's `index.html`).
 
 ```bash
-node scripts/optimize-model.mjs public/models/module.glb src/data/anchors.json
+node scripts/optimize-model.mjs   # emits both variants + src/data/anchors.json
 # deps: @gltf-transform/core @gltf-transform/functions @gltf-transform/extensions meshoptimizer sharp
 ```
 
 What it does: renames parts to stable slugs (`lidar-ld19`, `imu`, `mic-a/b/c`,
 `camera-ar0234`, `tof-8x8`, `jetson`, …), recenters + normalizes scale (height = 2 world
-units), drops split normals on CAD meshes → position-weld → per-mesh budgeted meshopt
-simplification → recomputed normals, WebP textures @1024, EXT_meshopt_compression, and emits
-per-part anchor data.
+units), strips textures the dark runtime grade discards, then for over-budget meshes only:
+drops split normals → position-weld → budgeted meshopt simplification → crease-angle (40°)
+normal reconstruction (hard edges stay hard, turned surfaces stay smooth, index buffers
+kept). Under-budget meshes ship untouched with authored normals. WebP textures,
+EXT_meshopt_compression level `high`, per-part anchor data, and end-of-build tri/size
+assertions.
+
+The filenames are **versioned** (`-v2`) because `/models/*` is served with a 1-year
+immutable cache header — bump the version on every regeneration or returning visitors
+keep the old geometry.
 
 Materials are re-graded at runtime (`gradeMaterial` in `src/three/ModuleModel.tsx`) because
 the Blender procedural shaders don't survive glTF export (the 3D-print filament falls back

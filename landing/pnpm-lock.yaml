@@ -50,6 +50,9 @@ importers:
       three:
         specifier: ^0.176.0
         version: 0.176.0
+      three-mesh-bvh:
+        specifier: ^0.9.13
+        version: 0.9.13(three@0.176.0)
     devDependencies:
       '@gltf-transform/core':
         specifier: ^4.4.1
@@ -1286,6 +1289,11 @@ packages:
     peerDependencies:
       three: '>= 0.159.0'
 
+  three-mesh-bvh@0.9.13:
+    resolution: {integrity: sha512-2zRh4iTFDmiTISanSVFofIw6J92DxFSqWn2qsQTtKp2ko5Ebk/JaI/wpMqNaBJ3F0qx7/NuP9GPK4jGDX99J2Q==}
+    peerDependencies:
+      three: '>= 0.159.0'
+
   three-stdlib@2.36.1:
     resolution: {integrity: sha512-XyGQrFmNQ5O/IoKm556ftwKsBg11TIb301MB5dWNicziQBEs2g3gtOYIf7pFiLa0zI2gUwhtCjv9fmjnxKZ1Cg==}
     peerDependencies:
@@ -2465,6 +2473,10 @@ snapshots:
       react: 19.2.7
 
   three-mesh-bvh@0.8.3(three@0.176.0):
+    dependencies:
+      three: 0.176.0
+
+  three-mesh-bvh@0.9.13(three@0.176.0):
     dependencies:
       three: 0.176.0
 

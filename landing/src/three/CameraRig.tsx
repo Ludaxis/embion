@@ -18,19 +18,15 @@ export function CameraRig() {
   const size = useThree((s) => s.size);
   const par = useRef({ x: 0, y: 0 });
 
-  useFrame((_, dt) => {
-    par.current.x = THREE.MathUtils.damp(
-      par.current.x,
-      motion.pointer.x * motion.parallax,
-      4,
-      dt,
-    );
-    par.current.y = THREE.MathUtils.damp(
-      par.current.y,
-      motion.pointer.y * motion.parallax * 0.6,
-      4,
-      dt,
-    );
+  useFrame((state, dt) => {
+    const tx = motion.pointer.x * motion.parallax;
+    const ty = motion.pointer.y * motion.parallax * 0.6;
+    par.current.x = THREE.MathUtils.damp(par.current.x, tx, 4, dt);
+    par.current.y = THREE.MathUtils.damp(par.current.y, ty, 4, dt);
+    // demand-frameloop: keep frames coming until the parallax damp settles
+    if (Math.abs(par.current.x - tx) > 1e-4 || Math.abs(par.current.y - ty) > 1e-4) {
+      state.invalidate();
+    }
 
     // Parallax orbits laterally around the look target, never just strafes:
     // offset perpendicular to the view direction.

@@ -20,7 +20,31 @@
     <!-- Internal review variant: reachable by direct URL, not indexed or listed. -->
     <meta name="robots" content="noindex" />
     <link rel="canonical" href="https://embion.vercel.app/v3/" />
-    <link rel="preload" as="image" href="/posters/poster-dark.webp" />
+    <script>
+      // Boot sequence (parse-time): scroll-restoration off + boot lock while the
+      // overlay is up, and start the GLB download in parallel with all JS.
+      // Heuristic mirrors src/lib/pickModel.ts; keep them in sync.
+      (function () {
+        try { history.scrollRestoration = 'manual'; } catch (e) {}
+        var d = document.documentElement;
+        d.classList.add('booting');
+        d.classList.add('js'); // gates JS-only initial-hidden states in CSS
+        setTimeout(function () { d.classList.remove('booting'); }, 15000);
+        var n = navigator;
+        var weak =
+          matchMedia('(pointer: coarse)').matches ||
+          (n.deviceMemory != null && n.deviceMemory <= 4) ||
+          (n.hardwareConcurrency != null && n.hardwareConcurrency <= 4);
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'fetch';
+        l.crossOrigin = 'anonymous'; // matches three FileLoader: mode cors + same-origin creds
+        l.setAttribute('fetchpriority', 'high');
+        l.href = weak ? '/models/module-mobile-v2.glb' : '/models/module-v2.glb';
+        document.head.appendChild(l);
+      })();
+    </script>
+    <link rel="preload" as="image" href="/posters/poster-v3.webp" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fbfbfd'/%3E%3Cpath d='M9 8h14v3.4H13v4.2h9v3.4h-9v4.6h10V27H9z' fill='%231d1d1f'/%3E%3C/svg%3E"

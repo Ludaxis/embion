@@ -80,12 +80,26 @@ h1 {
 .has-selection .stage-title { opacity: 0; transform: translateY(-14px); }
 
 /* ---------- canvas ---------- */
-.canvas-layer { position: fixed; inset: 0; z-index: 10; }
-.canvas-layer canvas { display: block; }
+.canvas-layer {
+  position: fixed; inset: 0; z-index: 10;
+  /* tonal lift behind the product — never dead-flat black */
+  background: radial-gradient(ellipse 75% 58% at 50% 48%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
+}
+.canvas-layer canvas { display: block; touch-action: pan-y; }
 .canvas-layer::before {
   content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
   background: radial-gradient(ellipse 62% 48% at 50% 52%, rgba(255, 77, 0, 0.05), transparent 68%);
 }
+/* CSS vignette + stage ground sweep (free on every tier) */
+.canvas-layer::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 12% at 50% 80%, rgba(255, 255, 255, 0.035), transparent 70%),
+    radial-gradient(ellipse 120% 100% at 50% 48%, transparent 58%, rgba(0, 0, 0, 0.42) 100%);
+}
+.can-drag .canvas-layer { cursor: grab; }
+.can-drag .canvas-layer:active { cursor: grabbing; }
+.explorer.has-hover .canvas-layer { cursor: pointer; }
 .poster {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; z-index: 2; pointer-events: none;
@@ -110,9 +124,14 @@ h1 {
 .preloader {
   position: fixed; inset: 0; z-index: 400;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 14px; background: var(--bg);
-  transition: opacity 0.55s ease, visibility 0.55s;
+  gap: 14px;
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse 75% 58% at 50% 48%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
+  transition: opacity 0.45s ease, visibility 0.45s;
+  animation: preloader-failsafe 0.5s ease 14s forwards; /* no-JS escape */
 }
+.preloader.js { animation: none; }
+@keyframes preloader-failsafe { to { opacity: 0; visibility: hidden; } }
 .preloader-out { opacity: 0; visibility: hidden; }
 .preloader-brand {
   font-family: var(--mono); letter-spacing: 0.4em; font-size: 12px;
@@ -121,6 +140,13 @@ h1 {
 .preloader-value {
   font-family: var(--mono); font-size: clamp(48px, 7vw, 84px);
   font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1;
+}
+.preloader-bar {
+  width: min(280px, 56vw); height: 1px; background: rgba(250, 250, 250, 0.12);
+}
+.preloader-fill {
+  height: 100%; background: var(--accent);
+  transform-origin: left; transition: transform 0.2s ease-out;
 }
 
 /* ---------- callouts ---------- */
@@ -176,6 +202,15 @@ h1 {
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(calc(-50% + 26px)); }
   to { opacity: 1; transform: translateY(-50%); }
+}
+/* animated exit — the glass panel leaves as the camera glides back, instead of
+   unmounting in a single frame */
+.part-card.leaving {
+  animation: cardOut 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes cardOut {
+  from { opacity: 1; transform: translateY(-50%); }
+  to { opacity: 0; transform: translateY(calc(-50% + 18px)); }
 }
 .part-card h2 {
   font-size: 24px; font-weight: 600; letter-spacing: -0.02em;
@@ -238,6 +273,11 @@ h1 {
   from { opacity: 0; transform: translateX(-50%) translateY(14px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+.overview-pill.leaving { animation: pillOut 0.22s ease both; }
+@keyframes pillOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0); }
+  to { opacity: 0; transform: translateX(-50%) translateY(10px); }
+}
 
 /* ---------- version switch ---------- */
 .version-switch {
@@ -273,12 +313,32 @@ h1 {
     transform: none; width: auto;
     animation-name: sheetIn;
   }
+  .part-card.leaving { animation-name: sheetOut; }
   @keyframes sheetIn {
     from { opacity: 0; transform: translateY(30px); }
     to { opacity: 1; transform: translateY(0); }
   }
+  @keyframes sheetOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(24px); }
+  }
   .overview-pill { bottom: auto; top: 76px; }
 }
 
-/* weak machines: static grain, no blend-mode compositing */
+/* ---------- reduced motion ---------- */
+html.reduced .grain { animation: none; }
+html.reduced .part-card,
+html.reduced .overview-pill { animation: none; }
+html.reduced .callout-label,
+html.reduced .btn { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .grain, .part-card, .overview-pill { animation: none; }
+}
+
+/* weak machines: static grain, no blend-mode compositing, cheaper glass */
 html.perf-low .grain { animation: none; mix-blend-mode: normal; opacity: 0.03; }
+html.perf-low .part-card,
+html.perf-low .overview-pill {
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  background: rgba(15, 15, 17, 0.93);
+}
