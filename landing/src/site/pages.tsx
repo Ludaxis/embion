@@ -148,6 +148,30 @@ export function ResearchPage() {
 
       <section className="panel">
         <div className="panel-inner">
+          <p className="kicker">{r.applications.kicker}</p>
+          <h2>{r.applications.title}</h2>
+          <div className="cases-grid">
+            {r.applications.cards.map((c) => (
+              <div className="case-card" key={c.title}>
+                <span className="case-index">{c.fields}</span>
+                <h3>{c.title}</h3>
+                <p>{c.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
+          <p className="kicker">{r.collab.kicker}</p>
+          <h2>{r.collab.title}</h2>
+          <p className="panel-body">{r.collab.body}</p>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-inner">
           <p className="kicker">In the paper</p>
           <h2>{r.citation.title}</h2>
           <p className="panel-body">{r.citation.body}</p>

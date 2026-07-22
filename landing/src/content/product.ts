@@ -45,7 +45,7 @@ export const HERO = {
 };
 
 export const STATS = [
-  { value: '5', unit: '', label: 'sensing modalities' },
+  { value: '6', unit: '', label: 'sensing modalities' },
   { value: '67', unit: 'TOPS', label: 'on-device compute' },
   { value: '360', unit: '°', label: 'LiDAR field of view' },
   { value: '1', unit: '', label: 'synchronized stream out' },
@@ -75,7 +75,7 @@ export const CHAPTERS: Chapter[] = [
     kicker: '01 · Range',
     title: 'Feels the room.',
     body: 'Geometry that doesn’t care about lighting. The LiDAR sweeps a full 360° plane at 4,500 samples per second, out to 12 meters — in the dark, in glare, behind your robot.',
-    specs: ['360° FOV', '12 m range', '4,500 samples/s'],
+    specs: ['360° · 12 m', '±45 mm accuracy', '4,500 samples/s'],
     side: 'left',
   },
   {
@@ -92,8 +92,8 @@ export const CHAPTERS: Chapter[] = [
     anchor: 'mic-b',
     kicker: '03 · Sound',
     title: 'Hears what it can’t see.',
-    body: 'Direction of sound, before line of sight. Three directional microphones place a voice behind your robot or a door closing around the corner by time-difference-of-arrival.',
-    specs: ['3 directional mics', 'TDOA localization', 'spectrogram encoding'],
+    body: 'Direction of sound, before line of sight. Three directional microphones place a voice behind your robot by time-difference-of-arrival — plus a dedicated low-noise acoustic channel for audio worth listening to.',
+    specs: ['3 directional + 1 acoustic', 'TDOA localization', 'low-noise preamp · VGA'],
     side: 'left',
   },
   {
@@ -102,7 +102,7 @@ export const CHAPTERS: Chapter[] = [
     kicker: '04 · Vision',
     title: 'Sees at speed.',
     body: 'Sharp under motion, because robots move. A true global shutter captures 1920×1200 at up to 120 fps — no rolling-shutter smear, even at speed.',
-    specs: ['1920 × 1200', '120 fps', 'global shutter'],
+    specs: ['1920 × 1200 @ 120 fps', 'global shutter', '100° DFOV · 87° HFOV'],
     side: 'right',
   },
   {
@@ -111,7 +111,7 @@ export const CHAPTERS: Chapter[] = [
     kicker: '05 · Proximity',
     title: 'Reflexes.',
     body: 'Fast proximity, before vision has processed a frame. An 8×8 depth grid updates at up to 60 Hz across the near field the LiDAR plane misses.',
-    specs: ['8 × 8 zones', '4 m reach', 'up to 60 Hz'],
+    specs: ['8 × 8 zones', '3.5 m reach', 'up to 60 Hz'],
     side: 'left',
   },
   {
@@ -119,15 +119,15 @@ export const CHAPTERS: Chapter[] = [
     anchor: 'jetson',
     kicker: '06 · Compute',
     title: 'Fused before it leaves the device.',
-    body: 'A Jetson Orin Nano Super runs acquisition, alignment, and encoding on board — 67 TOPS turning five raw feeds into one stream before your host reads a byte.',
-    specs: ['67 TOPS', '8 GB LPDDR5', 'JetPack 6'],
+    body: 'A Jetson Orin Nano Super runs acquisition, alignment, and encoding on board — 67 TOPS turning six raw feeds into one stream before your host reads a byte.',
+    specs: ['67 TOPS', '8 GB LPDDR5', '15–25 W'],
     side: 'right',
   },
   {
     id: 'fusion',
     anchor: 'chassis-upper',
     kicker: '07 · One stream',
-    title: 'Five senses. Complementary failure modes. One clock.',
+    title: 'Six senses. Complementary failure modes. One clock.',
     body: 'Every modality lands in the same synchronized frame. To your host it’s a camera: one cable, and anything that reads video reads your robot’s full sensory state.',
     specs: ['one shared clock', 'USB-C / HDMI out', 'reads as a standard camera'],
     side: 'left',
@@ -140,7 +140,7 @@ export const HOW_IT_WORKS = {
   steps: [
     {
       title: 'Plug it in.',
-      body: 'One USB-C cable. No driver zoo, no sensor plumbing.',
+      body: 'One USB-C cable. No driver zoo, no ROS dependency, no sensor plumbing.',
     },
     {
       title: 'It shows up as a camera.',
@@ -150,6 +150,55 @@ export const HOW_IT_WORKS = {
       title: 'Five lines of Python.',
       body: 'Decode, record, train. Export straight to LeRobot format.',
     },
+  ],
+};
+
+/** Home — the hidden cost of getting started (research-kit argument). */
+export const DAY_ONE = {
+  kicker: 'Day one',
+  title: 'Research starts in month six. It shouldn’t.',
+  body: 'Before a team can test a single hypothesis, they lose 6–12 months to drivers, clocks, calibration, and data formats — problems that have nothing to do with the research question. EMB-01 ships that infrastructure as a finished instrument: pre-calibrated sensors, one common data format, modular by design.',
+  without: {
+    label: 'Without the kit',
+    steps: [
+      ['Weeks 1–2', 'Driver setup'],
+      ['Weeks 3–4', 'Calibration'],
+      ['Weeks 5–6', 'Data format'],
+      ['Week 7+', 'Actual research'],
+    ] as [string, string][],
+  },
+  withKit: {
+    label: 'With EMB-01',
+    steps: [['Day 1', 'Capturing real multimodal data']] as [string, string][],
+  },
+  solves: {
+    title: 'Handled for you',
+    items: [
+      'Multi-sensor driver implementation',
+      'Hardware timestamp alignment',
+      'Intrinsic + extrinsic calibration',
+      'Cross-modal synchronization',
+      'Unified data format across modalities',
+      'Edge-optimized inference pipeline',
+      'Modular sensor extension framework',
+      'Deterministic logging and replay',
+    ],
+  },
+};
+
+/** Home — modular extensibility (grows with your research). */
+export const EXTEND = {
+  kicker: 'Modular',
+  title: 'Designed to grow with your research.',
+  body: 'Modular at every level: add sensing capability, swap modalities, or integrate an entirely new sensor into the same clock and data format.',
+  roster: [
+    'GPS / GNSS',
+    'Thermal camera',
+    '3D LiDAR',
+    'Gas / air sensors',
+    'UWB / radar',
+    'Force / tactile',
+    'Physiological',
   ],
 };
 
@@ -242,14 +291,19 @@ export const BUILDERS = {
   title: 'Built for builders.',
   cards: [
     {
-      title: 'Researchers',
-      body: 'Multimodal ground truth without the plumbing. Citable, reproducible, BibTeX-ready.',
+      title: 'Model researchers',
+      body: 'Fusion, multimodal models, and benchmarks on real-world data — without building the pipeline first.',
       href: '/research/',
     },
     {
       title: 'Robotics teams',
-      body: 'A perception stack prototyped in an afternoon, not a quarter.',
+      body: 'Mount it as a complete multi-sensory perception brain: vision, depth, spatial, and audio.',
       href: '/developers/',
+    },
+    {
+      title: 'Hardware researchers',
+      body: 'Add custom sensors — GPS, thermal, 3D LiDAR — and study real-time scheduling on unified-memory SoC hardware.',
+      href: '/research/',
     },
     {
       title: 'LeRobot community',
@@ -273,8 +327,8 @@ export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
   {
     group: 'Ranging',
     rows: [
-      ['2D LiDAR', 'FHL-LD19 · 360° · 12 m · 4,500 samples/s'],
-      ['Near-field depth', '8×8 ToF ranging array · 64 zones · up to 4 m'],
+      ['2D LiDAR', 'FHL-LD19 · 360° · 12 m · ±45 mm · 4,500 samples/s'],
+      ['Near-field depth', '8×8 ToF ranging array · 64 zones · up to 3.5 m @ 60 Hz'],
     ],
   },
   {
@@ -286,13 +340,14 @@ export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
   {
     group: 'Vision',
     rows: [
-      ['Camera', 'AR0234 · 1/2.6″ global shutter · 1920×1200 @ 120 fps'],
+      ['Camera', 'AR0234 · 1/2.6″ global shutter · 1920×1200 @ 120 fps · 100° DFOV / 87° HFOV / 56° VFOV'],
     ],
   },
   {
     group: 'Audio',
     rows: [
-      ['Microphones', '3 × directional · time-difference-of-arrival localization'],
+      ['Microphones', '3 × directional (TDOA localization) + dedicated acoustic channel'],
+      ['Analog front end', 'Low-noise preamp · variable-gain amplifier · output amplifier'],
       ['Encoding', 'Short-time Fourier transform → spectrogram region'],
     ],
   },
@@ -310,14 +365,16 @@ export const SPEC_GROUPS: { group: string; rows: [string, string][] }[] = [
       ['Output', 'Single composed video frame · HDMI → USB-C capture'],
       ['Synchronization', 'Render-level, on-device — all modalities share one frame clock · [TODO: sync precision]'],
       ['Host requirements', 'Anything that reads a standard camera stream'],
+      ['Dependencies', 'No ROS required — plain video on any host · ROS 2 driver planned'],
     ],
   },
   {
     group: 'Physical',
     rows: [
       ['Chassis', '3D-printed modular frame · sensor positions reconfigurable'],
+      ['Extensibility', 'Modular sensor framework — GPS/GNSS, thermal, 3D LiDAR, gas, UWB/radar, tactile, physiological'],
       ['Weight', '[TODO: weight]'],
-      ['Power', '[TODO: power draw]'],
+      ['Power', '15–25 W envelope (Jetson Orin Nano Super)'],
     ],
   },
   {

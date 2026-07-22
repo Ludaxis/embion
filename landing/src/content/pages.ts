@@ -7,7 +7,7 @@ import { BUILD_LOG_URL, CONTACT_EMAIL } from './product';
 export const DEVELOPERS = {
   kicker: 'Developers',
   h1: 'It’s a camera. Until you decode it.',
-  sub: 'EMB-01 enumerates on any host as a standard video device. Point OpenCV at it and you have a demo. Import the SDK and you have five synchronized modalities with real timestamps.',
+  sub: 'EMB-01 enumerates on any host as a standard video device. Point OpenCV at it and you have a demo. Import the SDK and you have six synchronized modalities with real timestamps.',
   codeTodo: '[TODO: confirm API]',
   // [TODO: confirm API names against shipped SDK]
   code: `from embion import EMB01
@@ -26,7 +26,7 @@ sensor.record("episode_001")     # LeRobot-format episode`,
       },
       {
         title: 'Webcam view.',
-        body: 'Open any camera app. The composed frame is right there: five modalities in fixed regions.',
+        body: 'Open any camera app. The composed frame is right there: every modality in a fixed region.',
       },
       {
         title: 'Decoded view.',
@@ -56,7 +56,7 @@ sensor.record("episode_001")     # LeRobot-format episode`,
       { id: 'lidar', label: 'lidar · 360° planar scan' },
       { id: 'tof', label: 'tof · 8×8 depth grid' },
       { id: 'imu', label: 'imu · orientation + accel' },
-      { id: 'audio', label: 'audio · 3-mic spectrogram + DoA' },
+      { id: 'audio', label: 'audio · spectrograms + DoA (3 directional + acoustic)' },
     ],
     code: `# The whole module enumerates as one video device
 import cv2
@@ -112,10 +112,51 @@ export const RESEARCH = {
             with the first hardware revision]},
 }`,
   },
+  applications: {
+    kicker: 'Research applications',
+    title: 'One platform. Wildly different directions.',
+    cards: [
+      {
+        title: 'Multimodal scene understanding',
+        body: 'Fuse visual, spatial, and acoustic streams into rich 3D semantic maps of dynamic environments.',
+        fields: 'Robotics · CV · AI',
+      },
+      {
+        title: 'Audio-visual speech processing',
+        body: 'Combine lip reading, acoustic source localization, and speech recognition for robust voice interfaces.',
+        fields: 'HCI · Signal processing',
+      },
+      {
+        title: 'Human activity recognition',
+        body: 'Multi-sensory observation of motion, posture, sound events, and spatial presence — simultaneously.',
+        fields: 'HRI · Healthcare · Sports',
+      },
+      {
+        title: 'Acoustic environment mapping',
+        body: 'Correlate sound sources with physical geometry using the microphone array and LiDAR together.',
+        fields: 'Acoustics · Architecture',
+      },
+      {
+        title: 'Embodied AI and robot learning',
+        body: 'Train agents that perceive through multiple senses — the grounding that makes decisions robust.',
+        fields: 'Robotics · RL',
+      },
+      {
+        title: 'Sensor fusion research',
+        body: 'Benchmark novel fusion methods against a reproducible multimodal baseline with deterministic replay.',
+        fields: 'IT · Signal processing',
+      },
+    ],
+  },
+  collab: {
+    kicker: 'Work with us',
+    title: 'Research collaboration',
+    body: 'Co-develop a specific capability, integrate the kit into a funded project, or benchmark your algorithm against the platform as a published baseline. Joint authorship where appropriate.',
+  },
   foundingLabs: {
     kicker: 'Founding Labs Program',
     title: 'Five labs. Five units.',
-    body: 'Direct support from both founders; you break it and tell us how. In exchange: honest feedback, a citation when it earns one, and permission to name you.',
+    body: 'Direct support from both founders; you break it and tell us how. In exchange: honest feedback, a citation when it earns one, and permission to name you. First-access institutions shape the roadmap.',
     cta: 'Apply as a founding lab',
     subject: 'EMB-01 — founding lab application',
     note: 'Tell us what you’d capture.',
@@ -149,7 +190,7 @@ export const DATASETS = {
   sub: 'The proof of a capture device is the data it captures.',
   comingSoon: {
     title: 'Coming soon.',
-    body: 'No dataset is published yet, and we won’t fake one. Our first public benchmark dataset lands with Batch One — five modalities, one clock, on the Hugging Face Hub, with an episode visualizer. [TODO: Hub link]',
+    body: 'No dataset is published yet, and we won’t fake one. Our first public benchmark dataset lands with Batch One — six modalities, one clock, on the Hugging Face Hub, with an episode visualizer. [TODO: Hub link]',
     captureTitle: 'Get notified.',
     subject: 'EMB-01 datasets — notify me',
     cta: 'Notify me',
@@ -194,7 +235,7 @@ export const DEVKIT = {
   },
   reserve: {
     title: 'Reserve yours.',
-    body: '[TODO: price] — reserve with your email. No payment today. Batch One ships [TODO: window]; reservations convert in order.',
+    body: 'Early access includes full documentation, calibration tooling, and direct technical support. [TODO: price] — reserve with your email. No payment today. Batch One ships [TODO: window]; reservations convert in order.',
     subject: 'EMB-01 dev kit — Batch One reservation',
     cta: 'Reserve a dev kit',
   },
@@ -229,12 +270,18 @@ export const STORY = {
     paragraphs: [
       { text: 'Compute got cheap. Models got good. What’s left is the part nobody scraped: reality.' },
       {
+        text: 'Multimodal foundation models are becoming the standard — frontier systems already process vision, language, and spatial data together, and embodied AI is heading the same way. Edge hardware finally caught up too: a Jetson Orin Nano Super runs TensorRT inference and a full multi-sensor stack inside a 15–25 W envelope.',
+      },
+      {
         text: 'A language model learns from trillions of tokens copied off the internet for free. A robot learns from synchronized sight, depth, sound, and motion recorded during real physical interaction — and that data doesn’t exist at internet scale. The largest open robot-learning dataset holds about a million episodes, pooled from more than sixty labs. The image-text datasets behind modern vision models hold billions.',
         fns: [6, 7],
       },
       {
         text: 'Billions of dollars are now betting on robot foundation models. Every one of those models is hungry for the same thing: synchronized multimodal recordings of the physical world.',
         fns: [4, 5],
+      },
+      {
+        text: 'The community has the theory. The missing piece is infrastructure that takes a team from hypothesis to real-world multimodal data in days, not months.',
       },
       { text: 'EMB-01 is the instrument that records it.' },
     ],

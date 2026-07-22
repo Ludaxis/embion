@@ -1,5 +1,6 @@
 import {
   HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND, WHY_NOW_TEASER, DEMO_VIDEO,
+  DAY_ONE, EXTEND,
 } from '../content/product';
 import { DemoVideo, Fn, SiteFooter, TodoText } from '../site/chrome';
 
@@ -9,13 +10,75 @@ export function AfterTrack() {
     <div id="after-track">
       <HowItWorks />
       <DemoSection />
+      <DayOne />
       <WhyOneStream />
       <DataStory />
       <BuiltForBuilders />
+      <Extend />
       <WhyNowTeaser />
       <DevkitBand />
       <SiteFooter />
     </div>
+  );
+}
+
+/** The research-kit argument: what 6–12 months of infrastructure looks like,
+ *  and what day one looks like instead. */
+function DayOne() {
+  return (
+    <section className="panel" id="day-one">
+      <div className="panel-inner">
+        <div className="panel-copy reveal">
+          <p className="kicker">{DAY_ONE.kicker}</p>
+          <h2>{DAY_ONE.title}</h2>
+          <p className="panel-body">{DAY_ONE.body}</p>
+        </div>
+        <div className="timeline-compare reveal">
+          <div className="timeline-col">
+            <p className="timeline-label">{DAY_ONE.without.label}</p>
+            {DAY_ONE.without.steps.map(([when, what]) => (
+              <div className="timeline-row" key={when}>
+                <span className="timeline-when">{when}</span>
+                <span className="timeline-what">{what}</span>
+              </div>
+            ))}
+          </div>
+          <div className="timeline-col timeline-col-accent">
+            <p className="timeline-label">{DAY_ONE.withKit.label}</p>
+            {DAY_ONE.withKit.steps.map(([when, what]) => (
+              <div className="timeline-row" key={when}>
+                <span className="timeline-when">{when}</span>
+                <span className="timeline-what">{what}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="solves reveal">
+          <p className="solves-title">{DAY_ONE.solves.title}</p>
+          <ul className="solves-grid">
+            {DAY_ONE.solves.items.map((it) => <li key={it}>{it}</li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Modular extensibility roster. */
+function Extend() {
+  return (
+    <section className="panel" id="extend">
+      <div className="panel-inner">
+        <div className="panel-copy reveal">
+          <p className="kicker">{EXTEND.kicker}</p>
+          <h2>{EXTEND.title}</h2>
+          <p className="panel-body">{EXTEND.body}</p>
+        </div>
+        <ul className="extend-roster reveal">
+          {EXTEND.roster.map((r) => <li key={r}>{r}</li>)}
+        </ul>
+      </div>
+    </section>
   );
 }
 
