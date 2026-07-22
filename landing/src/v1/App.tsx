@@ -5,7 +5,7 @@ import { motion, requestRender } from '../lib/motion';
 import { EXTRACT_VECTORS } from '../three/parts';
 import { Callouts } from './Callouts';
 import { AfterTrack } from './Sections';
-import { track } from '../site/chrome';
+import { track, VersionSwitch } from '../site/chrome';
 import {
   BRAND, PRODUCT_CODE, PRODUCT_NAME, HERO, PHILOSOPHY, STATS, CHAPTERS,
   NAV, CTA,
@@ -390,10 +390,7 @@ export function App() {
 
       <AfterTrack />
 
-      <nav className="version-switch" aria-label="Page versions">
-        <span className="vs-current">01 Noir</span>
-        <a className="vs-other" href="/v3/">02 Explorer</a>
-      </nav>
+      <VersionSwitch current="noir" />
     </div>
   );
 }

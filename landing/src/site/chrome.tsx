@@ -78,6 +78,8 @@ type CaptureState = 'idle' | 'sending' | 'ok' | 'error';
  * SUPABASE_* or RESERVE_WEBHOOK_URL env vars are configured on Vercel). Until
  * then — or on any failure — it falls back to opening a prefilled email, so
  * the path always works. A plain mailto link handles the no-JS case.
+ * The founding-lab variant adds an optional name and a free-text
+ * "what would you capture?" field.
  */
 export function EmailCapture({
   subject,
@@ -88,13 +90,16 @@ export function EmailCapture({
 }: {
   subject: string;
   cta: string;
-  kind?: 'reserve' | 'lab' | 'notify';
+  kind?: 'reserve' | 'founding_lab' | 'notify';
   successCopy?: string;
   placeholder?: string;
 }) {
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [message, setMessage] = useState('');
   const [hp, setHp] = useState(''); // honeypot: humans never see or fill it
   const [state, setState] = useState<CaptureState>('idle');
+  const isLab = kind === 'founding_lab';
   const mailto = (body?: string) =>
     `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}${
       body ? `&body=${encodeURIComponent(body)}` : ''
@@ -102,20 +107,31 @@ export function EmailCapture({
 
   const submit = async () => {
     setState('sending');
-    track(kind === 'lab' ? 'lab_apply_submit' : kind === 'notify' ? 'notify_submit' : 'reserve_submit');
+    track(isLab ? 'lab_apply_submit' : kind === 'notify' ? 'notify_submit' : 'reserve_submit');
     try {
       const res = await fetch('/api/reserve', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, kind, subject, company: hp }),
+        body: JSON.stringify({
+          email,
+          name,
+          kind,
+          message,
+          page: location.pathname,
+          company: hp,
+        }),
       });
       if (!res.ok) throw new Error(String(res.status));
       setState('ok');
     } catch {
       // Server-side storage not reachable (or not configured yet): hand the
-      // reservation to the visitor's email app instead so nothing is lost.
+      // submission to the visitor's email app instead so nothing is lost.
       setState('error');
-      window.location.href = mailto(`Put me on the list: ${email}`);
+      window.location.href = mailto(
+        [`Put me on the list: ${email}`, name && `Name: ${name}`, message]
+          .filter(Boolean)
+          .join('\n'),
+      );
     }
   };
 
@@ -133,6 +149,15 @@ export function EmailCapture({
         }}
       >
         <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name (optional)"
+          aria-label="Name (optional)"
+          autoComplete="name"
+          disabled={state === 'sending'}
+        />
+        <input
           type="email"
           required
           value={email}
@@ -141,6 +166,16 @@ export function EmailCapture({
           aria-label="Email address"
           disabled={state === 'sending'}
         />
+        {isLab && (
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="What would you capture?"
+            aria-label="What would you capture?"
+            rows={3}
+            disabled={state === 'sending'}
+          />
+        )}
         <input
           type="text"
           name="company"
@@ -158,7 +193,8 @@ export function EmailCapture({
       {state === 'error' ? (
         <p className="capture-note" role="status">
           We couldn’t save that automatically, so your email app opened with it
-          instead. Or write to <a href={mailto()}>{CONTACT_EMAIL}</a>.
+          instead — send that, or submit again. Email not sending? Write to{' '}
+          <a href={mailto()}>{CONTACT_EMAIL}</a> directly.
         </p>
       ) : (
         <p className="capture-note">
@@ -170,14 +206,92 @@ export function EmailCapture({
   );
 }
 
-/** Site-wide footer: email capture, links, and the quiet module back door. */
-export function SiteFooter() {
+/**
+ * Demo video slot. With no `src` yet it renders an honest poster-frame
+ * placeholder; dropping the file URL into DEMO_VIDEO.src is the only change
+ * needed to go live. Fires `demo_video_play` once real.
+ */
+export function DemoVideo({
+  src,
+  poster,
+  caption,
+  todo,
+}: {
+  src: string;
+  poster: string;
+  caption: string;
+  todo: string;
+}) {
+  if (!src) {
+    return (
+      <figure className="demo-video">
+        <div
+          className="media-placeholder demo-video-poster"
+          style={{ backgroundImage: `url(${poster})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        >
+          <Todo>{todo}</Todo>
+        </div>
+        <figcaption className="frame-caption">{caption}</figcaption>
+      </figure>
+    );
+  }
+  return (
+    <figure className="demo-video">
+      <video
+        controls
+        preload="none"
+        poster={poster}
+        onPlay={() => track('demo_video_play')}
+        style={{ width: '100%', display: 'block' }}
+      >
+        <source src={src} />
+      </video>
+      <figcaption className="frame-caption">{caption}</figcaption>
+    </figure>
+  );
+}
+
+/**
+ * Noir/Explorer variant switcher — internal review only. Renders nothing in
+ * production unless the page is opened with `?theme=`; variants stay reachable
+ * by direct URL. Client-only, so the prerendered HTML never contains it.
+ */
+export function VersionSwitch({ current }: { current: 'noir' | 'explorer' }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (import.meta.env.DEV || new URLSearchParams(location.search).has('theme')) {
+      setVisible(true);
+    }
+  }, []);
+  if (!visible) return null;
+  return (
+    <nav className="version-switch" aria-label="Page versions">
+      {current === 'noir' ? (
+        <>
+          <span className="vs-current">01 Noir</span>
+          <a className="vs-other" href="/v3/">02 Explorer</a>
+        </>
+      ) : (
+        <>
+          <a href="/">01 Noir</a>
+          <span className="vs-active">02 Explorer</span>
+        </>
+      )}
+    </nav>
+  );
+}
+
+/** Site-wide footer: email capture, links, and the quiet module back door.
+ *  /devkit passes hideCapture — its own reserve section is the band. */
+export function SiteFooter({ hideCapture = false }: { hideCapture?: boolean }) {
   return (
     <footer className="big-footer">
-      <div className="footer-capture">
-        <h3>{FOOTER.captureTitle}</h3>
-        <EmailCapture subject={RESERVE_SUBJECT} cta="Get in line" />
-      </div>
+      {!hideCapture && (
+        <div className="footer-capture">
+          <h3>{FOOTER.captureTitle}</h3>
+          <EmailCapture subject={RESERVE_SUBJECT} cta="Get in line" />
+        </div>
+      )}
       <div className="footer-links">
         {FOOTER.links.map((l) =>
           l.href ? (
@@ -212,7 +326,15 @@ export function SiteFooter() {
  * Shell for the sub-pages: fixed header (solid once scrolled, same as home),
  * page content, shared footer. The 3D pages keep their own layout.
  */
-export function PageShell({ current, children }: { current: string; children: ReactNode }) {
+export function PageShell({
+  current,
+  children,
+  hideFooterCapture = false,
+}: {
+  current: string;
+  children: ReactNode;
+  hideFooterCapture?: boolean;
+}) {
   useEffect(() => {
     const onScroll = () =>
       document.body.classList.toggle('scrolled', window.scrollY > 120);
@@ -224,7 +346,7 @@ export function PageShell({ current, children }: { current: string; children: Re
     <div className="subpage">
       <SiteHeader current={current} />
       <main className="page-main">{children}</main>
-      <SiteFooter />
+      <SiteFooter hideCapture={hideFooterCapture} />
     </div>
   );
 }

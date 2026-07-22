@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { motion, screenAnchors, requestRender } from '../lib/motion';
 import { prefersReducedMotion } from '../lib/scroll';
 import { EXTRACT_VECTORS } from '../three/parts';
+import { VersionSwitch } from '../site/chrome';
 import {
   BRAND, PRODUCT_CODE, CHAPTERS, NAV, CTA,
 } from '../content/product';
@@ -367,10 +368,7 @@ export function App() {
         })}
       </section>
 
-      <nav className="version-switch" aria-label="Page versions">
-        <a href="/">01 Noir</a>
-        <span className="vs-active">02 Explorer</span>
-      </nav>
+      <VersionSwitch current="explorer" />
     </div>
   );
 }

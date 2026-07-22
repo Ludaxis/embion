@@ -225,6 +225,17 @@ export const SOURCES: Source[] = [
   },
 ];
 
+/** Demo video slot (Home + /developers). Drop the real file/URL into `src`
+ *  when it exists — the player wires itself up; nothing else changes. */
+export const DEMO_VIDEO = {
+  kicker: 'Demo',
+  title: 'Ninety seconds, plug to stream.',
+  src: '', // e.g. '/media/demo-90s.mp4' — one-line change when the video lands
+  poster: '/posters/poster-dark.webp',
+  caption: 'The 90-second demo ships with Batch One.',
+  todo: '[TODO: 90-second demo video — plug in, webcam view, decoded view]',
+};
+
 /** Home — built for builders. */
 export const BUILDERS = {
   kicker: 'Who it’s for',
@@ -250,7 +261,7 @@ export const BUILDERS = {
 
 /** Home — dev kit band. */
 export const DEVKIT_BAND = {
-  kicker: 'Developer kit',
+  kicker: 'Developer Kit',
   title: 'EMB-01 Developer Kit — Batch One.',
   facts: ['[TODO: price]', '[TODO: batch size] units, hand-assembled in Tallinn', '[TODO: ship window]'],
   cta: 'Reserve yours',

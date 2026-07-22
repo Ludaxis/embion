@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import {
-  PageShell, PageHero, CodeCard, EmailCapture, Todo, TodoText, Fn, track,
+  PageShell, PageHero, CodeCard, EmailCapture, DemoVideo, Todo, TodoText, Fn, track,
 } from './chrome';
 import {
-  CTA, SPEC_GROUPS, MODULES_MAILTO, SOURCES,
+  CTA, SPEC_GROUPS, MODULES_MAILTO, SOURCES, DEMO_VIDEO,
 } from '../content/product';
 import {
   DEVELOPERS, RESEARCH, LEROBOT, DATASETS, DEVKIT, STORY,
@@ -66,11 +66,14 @@ export function DevelopersPage() {
 
       <section className="panel">
         <div className="panel-inner">
-          <p className="kicker">Demo</p>
-          <h2>Ninety seconds, plug to stream.</h2>
-          <div className="media-placeholder">
-            <Todo>{d.demoTodo}</Todo>
-          </div>
+          <p className="kicker">{DEMO_VIDEO.kicker}</p>
+          <h2>{DEMO_VIDEO.title}</h2>
+          <DemoVideo
+            src={DEMO_VIDEO.src}
+            poster={DEMO_VIDEO.poster}
+            caption={DEMO_VIDEO.caption}
+            todo={d.demoTodo}
+          />
         </div>
       </section>
 
@@ -161,11 +164,10 @@ export function ResearchPage() {
             <EmailCapture
               subject={r.foundingLabs.subject}
               cta={r.foundingLabs.cta}
-              kind="lab"
-              successCopy="Application received. We read every one."
+              kind="founding_lab"
+              successCopy="Application received. We read every one — expect a reply from a founder."
             />
           </div>
-          <p className="capture-note">{r.foundingLabs.note}</p>
         </div>
       </section>
     </PageShell>
@@ -264,7 +266,7 @@ export function DevkitPage() {
   const k = DEVKIT;
   useEffect(() => track('reserve_view'), []);
   return (
-    <PageShell current="/devkit/">
+    <PageShell current="/devkit/" hideFooterCapture>
       <PageHero kicker={k.kicker} title={k.h1} sub={<TodoText text={k.sub} />} />
 
       <section className="panel">

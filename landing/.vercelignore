@@ -1,0 +1,6 @@
+.vercel
+node_modules
+.git
+dist
+renders
+.env*.local

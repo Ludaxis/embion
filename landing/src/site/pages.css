@@ -74,7 +74,31 @@ a.case-card { display: block; text-decoration: none; color: inherit; }
 }
 .capture-form input:focus { border-color: rgba(255, 77, 0, 0.5); }
 .capture-form input::placeholder { color: var(--fg-faint); }
+.capture-form textarea {
+  flex: 1 1 100%;
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--hairline); border-radius: 22px;
+  padding: 13px 22px; font-family: var(--sans); font-size: 15px;
+  outline: none; resize: vertical; transition: border-color 0.25s;
+}
+.capture-form textarea:focus { border-color: rgba(255, 77, 0, 0.5); }
+.capture-form textarea::placeholder { color: var(--fg-faint); }
+.capture-form textarea:disabled { opacity: 0.6; }
 .capture-form .btn { border: none; cursor: pointer; }
+
+/* ---------- demo video slot ---------- */
+.demo-video { margin-top: 28px; }
+.demo-video-poster {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 16 / 9;
+}
+.demo-video-poster::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(10, 10, 11, 0.55);
+}
+.demo-video-poster .todo { position: relative; z-index: 1; }
+.demo-video video { width: 100%; border-radius: 14px; border: 1px solid var(--hairline); }
 .capture-note {
   margin-top: 12px; font-size: 13px; color: var(--fg-muted);
 }

@@ -125,7 +125,7 @@ export const RESEARCH = {
 export const LEROBOT = {
   kicker: 'LeRobot',
   h1: 'The perception head for your LeRobot rig.',
-  body: 'Recording SO-101 episodes today means webcams taped to the desk — front, wrist, top — each on its own clock. EMB-01 replaces the camera rig and adds what webcams can’t: 360° geometry, sound, and motion, synchronized in hardware. One line exports episodes in LeRobotDataset format, ready for the Hub.',
+  body: 'Recording SO-101 episodes today means webcams taped to the desk — front, wrist, top — each on its own clock. EMB-01 replaces the camera rig and adds what webcams can’t: 360° geometry, sound, and motion, synchronized on-device. One line exports episodes in LeRobotDataset format, ready for the Hub.',
   mediaTodo: '[TODO: photo/render — EMB-01 mounted over an SO-101 workspace]',
   example: {
     title: 'Worked example',
@@ -157,7 +157,7 @@ export const DATASETS = {
 };
 
 export const DEVKIT = {
-  kicker: 'Developer kit',
+  kicker: 'Developer Kit',
   h1: 'EMB-01 Developer Kit.',
   sub: 'Batch One. [TODO: batch size] units, hand-assembled in Tallinn, each one tested and supported by the people who designed it.',
   box: {
@@ -184,7 +184,7 @@ export const DEVKIT = {
       { feature: 'Microphone array', cells: ['—', '—', '—', '✓ (3, directional)'] },
       { feature: 'IMU', cells: ['✓', '✓', '✓', '✓ (10-axis)'] },
       { feature: 'Fast ToF proximity grid', cells: ['—', '—', '—', '✓ (8×8)'] },
-      { feature: 'Hardware-synced across all modalities', cells: ['—', '—', '—', '✓ [TODO: spec]'] },
+      { feature: 'All modalities on one clock, at capture', cells: ['—', '—', '—', '✓ [TODO: spec]'] },
       { feature: 'On-device compute', cells: ['—', 'needs NVIDIA GPU host', 'on-device VPU', 'Jetson Orin Nano Super'] },
       { feature: 'LeRobot-native export', cells: ['—', '—', '—', '✓'] },
       { feature: 'Street price', cells: ['~$400', '~$500+', '~$400+', '[TODO: price]'] },

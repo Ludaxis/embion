@@ -1,13 +1,14 @@
 import {
-  HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND, WHY_NOW_TEASER,
+  HOW_IT_WORKS, WHY_ONE_STREAM, DATA_STORY, BUILDERS, DEVKIT_BAND, WHY_NOW_TEASER, DEMO_VIDEO,
 } from '../content/product';
-import { Fn, SiteFooter, TodoText } from '../site/chrome';
+import { DemoVideo, Fn, SiteFooter, TodoText } from '../site/chrome';
 
 /** Everything after the 3D scroll track — opaque, DOM-first, SEO-real. */
 export function AfterTrack() {
   return (
     <div id="after-track">
       <HowItWorks />
+      <DemoSection />
       <WhyOneStream />
       <DataStory />
       <BuiltForBuilders />
@@ -33,6 +34,27 @@ function HowItWorks() {
               <p>{s.body}</p>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DemoSection() {
+  return (
+    <section className="panel" id="demo">
+      <div className="panel-inner">
+        <div className="panel-copy reveal">
+          <p className="kicker">{DEMO_VIDEO.kicker}</p>
+          <h2>{DEMO_VIDEO.title}</h2>
+        </div>
+        <div className="reveal">
+          <DemoVideo
+            src={DEMO_VIDEO.src}
+            poster={DEMO_VIDEO.poster}
+            caption={DEMO_VIDEO.caption}
+            todo={DEMO_VIDEO.todo}
+          />
         </div>
       </div>
     </section>

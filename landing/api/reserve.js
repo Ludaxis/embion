@@ -1,15 +1,18 @@
-// Stores reserve / founding-lab / notify submissions server-side.
+// Stores reserve / notify / founding-lab submissions server-side.
 // Storage backends, first configured wins (Vercel env vars):
-//   SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY  -> insert into `reservations`
+//   SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY  -> insert into `signups`
 //     (create with: id uuid default gen_random_uuid() primary key,
-//      email text, kind text, subject text, ua text, at timestamptz)
+//      created_at timestamptz default now(), email text, name text,
+//      kind text, message text, page text)
 //   RESERVE_WEBHOOK_URL                       -> POST the record as JSON
 // With neither configured this returns 501 and the client falls back to a
 // prefilled mailto — no submission is silently dropped.
+const KINDS = new Set(['reserve', 'notify', 'founding_lab']);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false });
 
-  const { email, kind, subject, company } = req.body ?? {};
+  const { email, name, kind, message, page, company } = req.body ?? {};
   // Honeypot: the visible form never fills `company`; bots do. Pretend success.
   if (typeof company === 'string' && company.length > 0) {
     return res.status(200).json({ ok: true });
@@ -19,16 +22,16 @@ export default async function handler(req, res) {
   }
   const record = {
     email: email.slice(0, 200),
-    kind: String(kind ?? 'reserve').slice(0, 40),
-    subject: String(subject ?? '').slice(0, 200),
-    ua: String(req.headers['user-agent'] ?? '').slice(0, 300),
-    at: new Date().toISOString(),
+    name: String(name ?? '').slice(0, 200),
+    kind: KINDS.has(kind) ? kind : 'reserve',
+    message: String(message ?? '').slice(0, 2000),
+    page: String(page ?? '').slice(0, 200),
   };
 
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, RESERVE_WEBHOOK_URL } = process.env;
   try {
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
-      const r = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/reservations`, {
+      const r = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/signups`, {
         method: 'POST',
         headers: {
           apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -45,7 +48,7 @@ export default async function handler(req, res) {
       const r = await fetch(RESERVE_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(record),
+        body: JSON.stringify({ ...record, at: new Date().toISOString() }),
       });
       if (!r.ok) throw new Error(`webhook ${r.status}`);
       return res.status(200).json({ ok: true });
