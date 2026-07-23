@@ -397,12 +397,12 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // Hero body — printed polymer as warm graphite, the brightest large
     // surface on the value ladder. Dielectric with a clearcoat micro-sheen.
     out = toPhysical(mat, {
-      roughness: 0.46,
+      roughness: 0.48,
       metalness: 0,
-      clearcoat: 0.5,
-      clearcoatRoughness: 0.32,
+      clearcoat: 0.42,
+      clearcoatRoughness: 0.26,
     });
-    out.color = new THREE.Color('#1e222a');
+    out.color = new THREE.Color('#191c23');
   } else if (name === 'Material.023') {
     // LiDAR puck body — turned/anodised gunmetal: TRUE metal, rough enough to
     // scatter the studio into a soft brushed sheen. Reflection energy (env 2.0)

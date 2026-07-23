@@ -189,12 +189,12 @@ export function App() {
       const introCam = gsap.fromTo(
         motion.cam,
         { x: 0.9, y: 1.7, z: -6.8 },
-        { ...vec(HERO.cam), delay: 0.35, duration: 2.4, ease: 'power2.out' },
+        { ...vec(HERO.cam), delay: 0.15, duration: 2.4, ease: 'power2.out' },
       );
       const introLook = gsap.fromTo(
         motion.look,
         { x: 0, y: 0.4, z: 0 },
-        { ...vec(HERO.look), delay: 0.35, duration: 2.4, ease: 'power2.out' },
+        { ...vec(HERO.look), delay: 0.15, duration: 2.4, ease: 'power2.out' },
       );
       gsap.set(motion.cam, { x: 0.9, y: 1.7, z: -6.8 }); // pose the covered frame
       gsap.from(['.hero-kicker', 'h1 > span', '.hero-sub', '.hero-ctas', '.scroll-hint'], {
@@ -203,7 +203,7 @@ export function App() {
         duration: 0.9,
         ease: 'power3.out',
         stagger: 0.09,
-        delay: 0.5,
+        delay: 0.3,
         clearProps: 'all',
       });
 
@@ -459,10 +459,10 @@ export function App() {
         <picture>
           {/* portrait phones get a portrait-composed poster (cover-cropping the
               16:9 shot pushed the module half off-frame) */}
-          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/home-portrait.v5.webp" />
+          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/home-portrait.v6.webp" />
           <img
             className="poster"
-            src="/posters/home.v5.webp"
+            src="/posters/home.v6.webp"
             alt=""
             fetchPriority="high"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}

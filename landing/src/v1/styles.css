@@ -100,7 +100,7 @@ body.scrolled .site-header {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   /* tonal lift behind the product: the near-black model needs a backdrop a
      step darker than its darkest values, not dead-flat black */
-  background: radial-gradient(ellipse 75% 58% at 50% 42%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
+  background: radial-gradient(ellipse 75% 58% at 50% 42%, #111318 0%, #0b0c0e 55%, #0a0a0b 100%);
 }
 .canvas-layer canvas { display: block; }
 /* CSS vignette + stage ground sweep — on a transparent canvas a post-process
@@ -109,7 +109,6 @@ body.scrolled .site-header {
 .canvas-layer::after {
   content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 12% at 50% 78%, rgba(255, 255, 255, 0.035), transparent 70%),
     radial-gradient(ellipse 120% 100% at 50% 45%, transparent 58%, rgba(0, 0, 0, 0.42) 100%);
 }
 .poster {
@@ -145,8 +144,8 @@ html.reduced .grain { animation: none; }
   gap: 20px;
   background-color: var(--bg);
   /* same tonal lift as the canvas layer, so the fade-out is seamless */
-  background-image: radial-gradient(ellipse 75% 58% at 50% 42%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
-  transition: opacity 0.45s ease, visibility 0.45s;
+  background-image: radial-gradient(ellipse 75% 58% at 50% 42%, #111318 0%, #0b0c0e 55%, #0a0a0b 100%);
+  transition: opacity 0.32s ease, visibility 0.32s;
   /* no-JS failsafe: the overlay ships in the prerendered HTML, so without JS
      it must dissolve on its own; hydrated clients cancel this via .js */
   animation: preloader-failsafe 0.5s ease 14s forwards;

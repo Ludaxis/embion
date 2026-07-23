@@ -37,9 +37,9 @@ export function CompileGate({ onDone }: { onDone: () => void }) {
     let alive = true;
     const done = () => alive && setCompiled(true);
     // Escape hatch: a slow or stuck async compile (headless GL, quirky
-    // drivers) must not hold the reveal hostage — after 3s proceed anyway and
+    // drivers) must not hold the reveal hostage — after 2s proceed anyway and
     // let any remaining compiles hitch behind the overlay fade instead.
-    const t = setTimeout(done, 3000);
+    const t = setTimeout(done, 2000);
     if (typeof gl.compileAsync === 'function') {
       gl.compileAsync(scene, camera).then(done, done);
     } else {

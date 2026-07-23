@@ -35,7 +35,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
   return (
     <>
       {theme === 'dark' && floor === 'reflect' && (
-        <fog attach="fog" args={['#0a0a0b', 7.5, 15]} />
+        <fog attach="fog" args={['#0a0a0b', 5.5, 11.5]} />
       )}
       {/* 256 is plenty for low-frequency softboxes and bakes ~4× faster */}
       <Environment resolution={256} frames={bakeFrames} background={false}>
@@ -44,8 +44,8 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             {/* soft top gradient — a slow falloff down the body reads as anodized */}
             <Lightformer
               form="rect"
-              color="#fff6ea"
-              intensity={3}
+              color="#f8f3ea"
+              intensity={2.5}
               position={[0, 6, -0.6]}
               rotation={[-Math.PI / 2, 0, 0]}
               scale={[10, 8, 1]}
@@ -55,8 +55,8 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
                 Bright enough to clearly lead the rims. */}
             <Lightformer
               form="rect"
-              color="#fff2dc"
-              intensity={5.2}
+              color="#f9f1e2"
+              intensity={4.4}
               position={[-4.2, 4.2, -3.2]}
               rotation={[-Math.PI / 2.6, -Math.PI / 7, 0]}
               scale={[9, 6, 1]}
@@ -75,7 +75,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#cfe0ff"
-              intensity={4.2}
+              intensity={3.4}
               position={[-4.7, 2.2, 3.1]}
               rotation={[0, -Math.PI * 0.7, 0]}
               scale={[0.6, 5, 1]}
@@ -84,7 +84,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#dbe8ff"
-              intensity={5.2}
+              intensity={4.2}
               position={[4.7, 2.0, 2.9]}
               rotation={[0, Math.PI * 0.7, 0]}
               scale={[0.6, 5.2, 1]}
@@ -93,7 +93,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#e6eeff"
-              intensity={3.2}
+              intensity={2.5}
               position={[-5, 1.2, -0.4]}
               rotation={[0, Math.PI / 2, 0]}
               scale={[7, 0.5, 1]}
@@ -164,20 +164,20 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
 
       {floor === 'reflect' && theme === 'dark' && (
         <mesh rotation-x={-Math.PI / 2} position={[0, -1.13, 0]}>
-          <planeGeometry args={[18, 18]} />
+          <planeGeometry args={[44, 44]} />
           <MeshReflectorMaterial
-            blur={[300, 110]}
+            blur={[320, 120]}
             resolution={512}
             mixBlur={1}
-            mixStrength={16}
-            roughness={0.95}
+            mixStrength={14}
+            roughness={1}
             depthScale={1}
             minDepthThreshold={0.35}
             maxDepthThreshold={1.4}
-            color="#030304"
-            metalness={0.5}
-            mirror={0.55}
-            envMapIntensity={0.35}
+            color="#0a0a0b"
+            metalness={0}
+            mirror={0.45}
+            envMapIntensity={0.12}
           />
         </mesh>
       )}

@@ -195,7 +195,7 @@ export function App() {
       { x: 0.4, y: 1.1, z: -5.3 },
       {
         x: OVERVIEW.cam[0], y: OVERVIEW.cam[1], z: OVERVIEW.cam[2],
-        delay: 0.3, duration: 2.1, ease: 'power2.out',
+        delay: 0.15, duration: 2.1, ease: 'power2.out',
       },
     );
     gsap.set(motion.cam, { x: 0.4, y: 1.1, z: -5.3 });
@@ -453,7 +453,7 @@ export function App() {
       >
         <img
           className="poster"
-          src="/posters/explorer.v5.webp"
+          src="/posters/explorer.v6.webp"
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}

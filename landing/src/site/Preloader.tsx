@@ -53,7 +53,7 @@ export function Preloader({ brand }: { brand: string }) {
   const done = phase === 'done';
   useEffect(() => {
     if (!done) return;
-    const t = setTimeout(() => setGone(true), 700);
+    const t = setTimeout(() => setGone(true), 480);
     return () => clearTimeout(t);
   }, [done]);
 

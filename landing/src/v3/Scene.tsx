@@ -55,12 +55,12 @@ export default function Scene({
   }, []);
 
   // Reveal when model + shaders are ready; give the post-processing chunk at
-  // most 2.5s more — a slow network must not hold the whole page hostage (the
+  // most 1.2s more — a slow network must not hold the whole page hostage (the
   // composer pops in behind the fade if it's late).
   const [composerWaived, setComposerWaived] = useState(false);
   useEffect(() => {
     if (!glbDone || !compiled) return;
-    const t = setTimeout(() => setComposerWaived(true), 2500);
+    const t = setTimeout(() => setComposerWaived(true), 1200);
     return () => clearTimeout(t);
   }, [glbDone, compiled]);
   useEffect(() => {

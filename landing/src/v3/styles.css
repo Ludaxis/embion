@@ -83,7 +83,7 @@ h1 {
 .canvas-layer {
   position: fixed; inset: 0; z-index: 10;
   /* tonal lift behind the product — never dead-flat black */
-  background: radial-gradient(ellipse 75% 58% at 50% 48%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
+  background: radial-gradient(ellipse 75% 58% at 50% 48%, #111318 0%, #0b0c0e 55%, #0a0a0b 100%);
 }
 .canvas-layer canvas { display: block; touch-action: pan-y; }
 .canvas-layer::before {
@@ -94,7 +94,6 @@ h1 {
 .canvas-layer::after {
   content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 12% at 50% 80%, rgba(255, 255, 255, 0.035), transparent 70%),
     radial-gradient(ellipse 120% 100% at 50% 48%, transparent 58%, rgba(0, 0, 0, 0.42) 100%);
 }
 .can-drag .canvas-layer { cursor: grab; }
@@ -126,8 +125,8 @@ h1 {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px;
   background-color: var(--bg);
-  background-image: radial-gradient(ellipse 75% 58% at 50% 48%, #15171c 0%, #0c0d0f 55%, #0a0a0b 100%);
-  transition: opacity 0.45s ease, visibility 0.45s;
+  background-image: radial-gradient(ellipse 75% 58% at 50% 48%, #111318 0%, #0b0c0e 55%, #0a0a0b 100%);
+  transition: opacity 0.32s ease, visibility 0.32s;
   animation: preloader-failsafe 0.5s ease 14s forwards; /* no-JS escape */
 }
 .preloader.js { animation: none; }
