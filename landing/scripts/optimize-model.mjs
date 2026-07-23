@@ -35,7 +35,10 @@ const SRC = '/Users/reza/Workspace/embion/path_planner_module/path_planner_modul
 // scratched plastic' baseColor already stripped, textures already ≤1024 WebP,
 // positions meshopt-quantized ≈ 1e-4 of extent).
 const GRAFT_SRC_PRIMARY = '/Users/reza/Workspace/embion/path_planner_module.glb';
-const GRAFT_SRC_FALLBACK = './public/models/module-v2.glb';
+// Committed copy of the v2 build (the deleted public/models/module-v2.glb,
+// restorable via `git show 1c72f2f:landing/public/models/module-v2.glb`).
+// It carries the finished camera-ar0234 + tof-8x8 the new export lacks.
+const GRAFT_SRC_FALLBACK = './scripts/graft-source.glb';
 
 // Nodes whose bounds must agree between SRC and the graft source before any
 // grafting happens (same rigid assembly in both exports). Names differ in the

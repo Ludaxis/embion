@@ -529,12 +529,40 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
       });
       out.color = new THREE.Color('#1a1c22');
     }
+  } else if (name.startsWith('BE1F1F1F')) {
+    // v4 camera lens barrel (translucent in the source) — treat as a real
+    // optic: dielectric, high-gloss, faint blue-ish sheen; opaque over the
+    // transparent canvas (true transmission renders black there).
+    out = toPhysical(mat, {
+      roughness: 0.06,
+      metalness: 0,
+      ior: 1.5,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+    });
+    out.color = new THREE.Color('#0a0d12');
+    out.emissive = new THREE.Color('#001420');
+    out.emissiveIntensity = 0.14;
+    out.transparent = false;
+    out.opacity = 1;
+    env = 2.0;
+  } else if (name.startsWith('FF398E00')) {
+    // v4 camera PCB — joins the site's one electronics hue (soldermask green).
+    out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.3 });
+    out.color = new THREE.Color('#163823');
+  } else if (name.startsWith('x1')) {
+    // v4 camera body neutral — seat the bright CAD grey into the dark grade.
+    out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.2 });
+    out.color = new THREE.Color('#565b64');
   } else if (/^(FF|BE|66)[0-9A-F]{6}(\.\d+)?$/.test(name)) {
-    // v3 exposed-PCB components (hex-named CAD colors: connectors, caps,
-    // headers, a red LED body, blue jack…). Keep their identity but seat them
-    // into the grade: slightly tamed albedo, matte dielectric finish.
+    // Exposed-PCB + camera components (hex-named CAD colors: connectors,
+    // caps, headers, silkscreen…). Keep their identity but seat them into the
+    // grade: tamed albedo, matte dielectric finish. Near-white parts get
+    // pulled down harder so they don't glare on the dark stage.
     out = toPhysical(mat, { roughness: 0.45, metalness: 0.05, clearcoat: 0.15 });
-    out.color = mat.color.clone().multiplyScalar(0.8);
+    const c = mat.color.clone();
+    const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    out.color = c.multiplyScalar(lum > 0.6 ? 0.62 : 0.8);
   }
 
   out.envMapIntensity = dark ? env : 1.1;
