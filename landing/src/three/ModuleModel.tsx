@@ -397,12 +397,12 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // Hero body — printed polymer as warm graphite, the brightest large
     // surface on the value ladder. Dielectric with a clearcoat micro-sheen.
     out = toPhysical(mat, {
-      roughness: 0.48,
+      roughness: 0.62,
       metalness: 0,
-      clearcoat: 0.42,
-      clearcoatRoughness: 0.26,
+      clearcoat: 0.12,
+      clearcoatRoughness: 0.5,
     });
-    out.color = new THREE.Color('#191c23');
+    out.color = new THREE.Color('#17191f');
   } else if (name === 'Material.023') {
     // LiDAR puck body — turned/anodised gunmetal: TRUE metal, rough enough to
     // scatter the studio into a soft brushed sheen. Reflection energy (env 2.0)
@@ -434,13 +434,13 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // AR0234 housing — matte dark polymer, lifted a step so the small part
     // reads against the chassis.
     out = toPhysical(mat, {
-      roughness: 0.46,
+      roughness: 0.58,
       metalness: 0,
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.34,
+      clearcoat: 0.12,
+      clearcoatRoughness: 0.5,
     });
     out.map = null;
-    out.color = new THREE.Color('#2b2d35');
+    out.color = new THREE.Color('#25272e');
   } else if (name === 'Glass dark') {
     // Camera lens — a DIELECTRIC optic, not black chrome: metalness 0 so
     // Fresnel + a strong env reflection define the glass, plus a whisper of

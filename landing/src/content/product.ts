@@ -280,7 +280,7 @@ export const DEMO_VIDEO = {
   kicker: 'Demo',
   title: 'Ninety seconds, plug to stream.',
   src: '', // e.g. '/media/demo-90s.mp4' — one-line change when the video lands
-  poster: '/posters/home.v6.webp',
+  poster: '/posters/home.v7.webp',
   caption: 'The 90-second demo ships with Batch One.',
   todo: '[TODO: 90-second demo video — plug in, webcam view, decoded view]',
 };

@@ -34,7 +34,6 @@ export function SensorFX({ accent }: Props) {
       <LidarSweep accent={accent} />
       <MicRings accent={accent} />
       <TofGrid accent={accent} />
-      <StatusLeds accent={accent} />
     </group>
   );
 }
@@ -63,11 +62,9 @@ function LidarSweep({ accent }: { accent: string }) {
   const spin = useRef<THREE.Group>(null);
   const matRef = useRef<THREE.MeshBasicMaterial>(null);
   const ringMatRef = useRef<THREE.LineBasicMaterial>(null);
-  // Full sweep during the LiDAR chapter; a faint idle scan otherwise, so the
-  // hero never reads as a powered-off prop.
-  const fade = useFocusFade(() =>
-    motion.focus === 'lidar-ld19' ? 1 : motion.focus ? 0 : motion.idle * 0.16,
-  );
+  // Sweep ONLY during the LiDAR chapter — at any other beat a faint ring
+  // reads as a stray red line slicing the hero, not as design.
+  const fade = useFocusFade(() => (motion.focus === 'lidar-ld19' ? 1 : 0));
   const color = useMemo(() => hdr(accent, 2.5), [accent]);
 
   const sector = useMemo(() => {
@@ -243,64 +240,5 @@ function TofGrid({ accent }: { accent: string }) {
         />
       </instancedMesh>
     </group>
-  );
-}
-
-/** Two tiny always-on accent LEDs — one at the ToF board, one at the LiDAR
- *  base — so the module reads as powered hardware in every shot. HDR emitters:
- *  they bloom on composer tiers and stay saturated dots on low. */
-// offsets are world-unit deltas from the part's bounds center, placed just
-// OUTSIDE the surface (from anchors.json part sizes)
-const LED_SPECS: { part: string; offset: [number, number, number] }[] = [
-  { part: 'tof-8x8', offset: [0.22, -0.15, -0.03] },
-  { part: 'lidar-ld19', offset: [0.13, -0.11, -0.235] },
-];
-
-const ledOff = new THREE.Vector3();
-const ledScale = new THREE.Vector3();
-
-function StatusLeds({ accent }: { accent: string }) {
-  const groupRefs = useRef<(THREE.Group | null)[]>([]);
-  const matRefs = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
-  const geo = useMemo(() => new THREE.SphereGeometry(0.013, 12, 12), []);
-  const base = useMemo(() => new THREE.Color(accent), [accent]);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    LED_SPECS.forEach((spec, i) => {
-      const g = groupRefs.current[i];
-      const m = matRefs.current[i];
-      if (!g || !m) return;
-      const entry = partRegistry.get(spec.part);
-      if (!entry) return;
-      // Offset in the PART's local space (world units / world scale) so the
-      // LED stays glued to the surface through the fusion turntable spin.
-      entry.obj.getWorldScale(ledScale);
-      ledOff.set(spec.offset[0], spec.offset[1], spec.offset[2]);
-      tmp.copy(entry.anchorLocal).addScaledVector(ledOff, 1 / (ledScale.x || 1));
-      entry.obj.localToWorld(tmp);
-      g.position.copy(tmp);
-      // slow asynchronous breathing; steady when reduced-motion (idle = 0)
-      const k = motion.idle > 0 ? 2.6 + 0.9 * Math.sin(t * 1.6 + i * 2.1) : 2.6;
-      // dim with the part's focus state so LEDs never outshine a focused chapter
-      const dimmed = motion.focus && motion.focus !== spec.part;
-      m.color.copy(base).multiplyScalar(dimmed ? k * 0.35 : k);
-    });
-  });
-
-  return (
-    <>
-      {LED_SPECS.map((spec, i) => (
-        <group key={spec.part} ref={(el) => { groupRefs.current[i] = el; }}>
-          <mesh geometry={geo}>
-            <meshBasicMaterial
-              ref={(el) => { matRefs.current[i] = el; }}
-              color={base}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-      ))}
-    </>
   );
 }

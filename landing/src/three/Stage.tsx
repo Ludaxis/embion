@@ -1,6 +1,6 @@
 import { memo, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, MeshReflectorMaterial } from '@react-three/drei';
+import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
 
 type Props = {
   theme: 'dark' | 'light';
@@ -27,16 +27,12 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
   useEffect(() => {
     // The MODEL's materials bind the env map directly (ModuleModel) and carry
     // their own envMapIntensity ladder — this global only reaches unbound
-    // materials, i.e. the reflector floor. Keep it low or the floor washes
-    // out the composition under AgX.
+    // materials (none in the dark void stage; kept for the light theme).
     scene.environmentIntensity = theme === 'dark' ? 0.4 : 1.1;
   }, [scene, theme]);
 
   return (
     <>
-      {theme === 'dark' && floor === 'reflect' && (
-        <fog attach="fog" args={['#0a0a0b', 5.5, 11.5]} />
-      )}
       {/* 256 is plenty for low-frequency softboxes and bakes ~4× faster */}
       <Environment resolution={256} frames={bakeFrames} background={false}>
         {theme === 'dark' ? (
@@ -45,7 +41,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#f8f3ea"
-              intensity={2.5}
+              intensity={3.4}
               position={[0, 6, -0.6]}
               rotation={[-Math.PI / 2, 0, 0]}
               scale={[10, 8, 1]}
@@ -56,7 +52,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#f9f1e2"
-              intensity={4.4}
+              intensity={5.8}
               position={[-4.2, 4.2, -3.2]}
               rotation={[-Math.PI / 2.6, -Math.PI / 7, 0]}
               scale={[9, 6, 1]}
@@ -65,7 +61,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#eef2ff"
-              intensity={1.1}
+              intensity={1.9}
               position={[0, 0.2, -5.4]}
               rotation={[0, Math.PI, 0]}
               scale={[7, 4, 1]}
@@ -111,7 +107,7 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
             <Lightformer
               form="rect"
               color="#eef1ff"
-              intensity={1.4}
+              intensity={1.9}
               position={[0, 1, 5]}
               rotation={[0, Math.PI, 0]}
               scale={[6, 3, 1]}
@@ -162,34 +158,13 @@ export const Stage = memo(function Stage({ theme, floor = 'none', bakeFrames = 1
         </>
       )}
 
-      {floor === 'reflect' && theme === 'dark' && (
-        <mesh rotation-x={-Math.PI / 2} position={[0, -1.13, 0]}>
-          <planeGeometry args={[44, 44]} />
-          <MeshReflectorMaterial
-            blur={[320, 120]}
-            resolution={512}
-            mixBlur={1}
-            mixStrength={14}
-            roughness={1}
-            depthScale={1}
-            minDepthThreshold={0.35}
-            maxDepthThreshold={1.4}
-            color="#0a0a0b"
-            metalness={0}
-            mirror={0.45}
-            envMapIntensity={0.12}
-          />
-        </mesh>
-      )}
 
       <ContactShadows
-        // Live on the high tier so the floor shadow tracks the fusion
-        // turntable + part extraction instead of freezing in the baked shape;
-        // slightly stronger when there is no reflector floor to ground the
-        // module on the flat backdrop.
+        // Live on the high tier so the shadow tracks the fusion turntable +
+        // part extraction instead of freezing in the baked shape.
         frames={floor === 'reflect' ? Infinity : bakeFrames}
         position={[0, theme === 'dark' ? -1.115 : -1.12, 0]}
-        opacity={theme === 'dark' ? (floor === 'reflect' ? 0.72 : 0.8) : 0.34}
+        opacity={theme === 'dark' ? 0.8 : 0.34}
         scale={6.5}
         blur={2.2}
         far={2.2}
