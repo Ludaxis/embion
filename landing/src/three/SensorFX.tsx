@@ -68,9 +68,26 @@ function LidarSweep({ accent }: { accent: string }) {
   const color = useMemo(() => hdr(accent, 2.5), [accent]);
 
   const sector = useMemo(() => {
-    const geo = new THREE.CircleGeometry(1.9, 48, 0, Math.PI / 3.2);
+    const geo = new THREE.CircleGeometry(1.6, 48, 0, Math.PI / 3.2);
     geo.rotateX(-Math.PI / 2);
     return geo;
+  }, []);
+
+  // Radial alpha falloff: the beam is dense at the emitter and dissolves
+  // outward — a flat additive sheet with a razor edge reads as a glitch.
+  const falloff = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.42)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.NoColorSpace;
+    return tex;
   }, []);
 
   const ring = useMemo(() => {
@@ -89,8 +106,8 @@ function LidarSweep({ accent }: { accent: string }) {
     if (!visible) return; // parked: skip all tracking/material work
     trackPart('lidar-ld19', root.current);
     spin.current.rotation.y = state.clock.elapsedTime * 1.4;
-    matRef.current.opacity = fade.current * 0.16;
-    ringMatRef.current.opacity = fade.current * 0.35;
+    matRef.current.opacity = fade.current * 0.11;
+    ringMatRef.current.opacity = fade.current * 0.25;
   });
 
   return (
@@ -100,6 +117,7 @@ function LidarSweep({ accent }: { accent: string }) {
           <meshBasicMaterial
             ref={matRef}
             color={color}
+            alphaMap={falloff}
             transparent
             opacity={0}
             side={THREE.DoubleSide}

@@ -34,8 +34,11 @@ export const FOCUS_GROUPS: Record<string, string[]> = {
   imu: ['imu'],
   'mic-b': ['mic-a', 'mic-b', 'mic-c'],
   'camera-ar0234': ['camera-ar0234'],
-  'tof-8x8': ['tof-8x8', 'mount-detail'], // carrier plate lights with its board
-  jetson: ['jetson', 'housing-rear', 'pcb-core'],
+  'tof-8x8': ['tof-8x8'], // board extracts ALONE — its printed carrier stays seated
+  // The compute BOARD extracts alone — grouping the rear housing + pcb-core
+  // here made three parts fly at different speeds (the bracket floated loose
+  // mid-air between them).
+  jetson: ['jetson'],
   'chassis-upper': [...PART_NAMES],
 };
 

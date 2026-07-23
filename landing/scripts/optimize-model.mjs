@@ -27,8 +27,8 @@ import { pathToFileURL } from 'node:url';
 //     runtime nulls it (ModuleModel 'mic' branch sets out.map = null).
 //
 // Produces two web variants:
-//   public/models/module-v5.glb        — desktop (≤225 k instanced tris, ≤1.9 MB)
-//   public/models/module-mobile-v5.glb — phones  (≤95 k instanced tris, ≤0.85 MB)
+//   public/models/module-v6.glb        — desktop (≤225 k instanced tris, ≤1.9 MB)
+//   public/models/module-mobile-v6.glb — phones  (≤95 k instanced tris, ≤0.85 MB)
 // The runtime picks the mobile file on coarse-pointer / low-tier devices.
 // NOTE: /models/* ships with a 1-year immutable cache header, so output names
 // are versioned (…-v5). Never overwrite a previously shipped filename — bump
@@ -70,14 +70,14 @@ const COORD_TOLERANCE = 0.01; // fraction of SRC bounding-box diagonal
 // that count; same for the 4 'standoff' instances and the 3 'mic' instances.
 const VARIANTS = [
   {
-    out: process.argv[2] ?? './public/models/module-v5.glb',
+    out: process.argv[2] ?? './public/models/module-v6.glb',
     anchorsOut: process.argv[3] ?? './src/data/anchors.json',
     tex: 1024,
     budgets: {
       // Seen-size budgets: the jetson sits mostly enclosed behind the shells,
       // the lidar's crown is the part that reads at hero/chapter framing.
       'jetson': { tris: 45_000, errorStart: 1e-3, errorCap: 0.012 },
-      'lidar-ld19': { tris: 45_000, errorStart: 5e-4, errorCap: 0.006 },
+      'lidar-ld19': { tris: 70_000, errorStart: 5e-4, errorCap: 0.003 },
       'imu': { tris: 15_000, errorStart: 5e-4, errorCap: 0.008 },
       'pcb-core': { tris: 18_000, errorStart: 5e-4, errorCap: 0.008 },
       'mount-detail': { tris: 5_000, errorStart: 5e-4, errorCap: 0.008 },
@@ -93,7 +93,7 @@ const VARIANTS = [
     limits: { minTris: 170_000, maxTris: 225_000, maxBytes: 1_900_000 },
   },
   {
-    out: './public/models/module-mobile-v5.glb',
+    out: './public/models/module-mobile-v6.glb',
     anchorsOut: null, // desktop anchors are authoritative; sizes match
     tex: 512,
     budgets: {

@@ -421,10 +421,12 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // LiDAR cap window — piano-black metal + a FELT IR-emitter glow (breathes
     // at idle, see ModuleModel useFrame; feeds Bloom on composer tiers).
     out = toPhysical(mat, {
-      roughness: 0.1,
+      // NOT mirror-gloss: at chapter zoom, ultra-gloss turns decimated
+      // normals into liquid wobble. Tight-satin keeps the piano-black read.
+      roughness: 0.18,
       metalness: 1,
-      clearcoat: 1,
-      clearcoatRoughness: 0.06,
+      clearcoat: 0.8,
+      clearcoatRoughness: 0.16,
     });
     out.color = new THREE.Color('#0d0908');
     out.emissive = new THREE.Color('#3d1000'); // amber IR window
@@ -501,9 +503,9 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // DFRobot marketing shot — keep the PCB component detail but seat it hard:
     // multiply the photo down so gold pads stop glowing and the silkscreen
     // branding recedes to invisibility.
-    out = toPhysical(mat, { roughness: 0.5, metalness: 0.05, clearcoat: 0.2 });
-    out.color = new THREE.Color('#8f939b');
-    env = 0.9;
+    out = toPhysical(mat, { roughness: 0.55, metalness: 0.05, clearcoat: 0 });
+    out.color = new THREE.Color('#7a7e85'); // seat the bright photo hard
+    env = 0.6;
   } else if (name.startsWith('Brushed Steel Procedural')) {
     // v3 bolts — machined steel: true metal, brushed roughness.
     out = toPhysical(mat, { roughness: 0.35, metalness: 1 });
@@ -515,21 +517,16 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     out.color = new THREE.Color('#2c2f36');
     env = 1.4;
   } else if (name === 'Material.012' || name === 'Material.018') {
-    // v3 ToF carrier plate — one of the pair carries a retailer board photo:
-    // seat it like tof-board; the untextured one reads as dark polymer.
-    if (mat.map) {
-      out = toPhysical(mat, { roughness: 0.5, metalness: 0.05, clearcoat: 0.2 });
-      out.color = new THREE.Color('#8f939b');
-      env = 0.9;
-    } else {
-      out = toPhysical(mat, {
-        roughness: 0.48,
-        metalness: 0,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.35,
-      });
-      out.color = new THREE.Color('#1a1c22');
-    }
+    // ToF carrier bracket — printed chassis part. The source texture is a
+    // board PHOTO that made it read as a silver ghost duplicate: kill it.
+    out = toPhysical(mat, {
+      roughness: 0.58,
+      metalness: 0,
+      clearcoat: 0.12,
+      clearcoatRoughness: 0.5,
+    });
+    out.map = null;
+    out.color = new THREE.Color('#191b21');
   } else if (name.startsWith('BE1F1F1F')) {
     // v4 camera lens barrel (translucent in the source) — treat as a real
     // optic: dielectric, high-gloss, faint blue-ish sheen; opaque over the
