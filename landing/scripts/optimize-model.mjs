@@ -9,21 +9,31 @@ import sharp from 'sharp';
 import { writeFileSync, statSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-// v3 HYBRID build. Source CAD export is the NEW mechanical-detail export
-// (134 MB — adds Node9 exposed PCB, Node1 camera assembly, 16 bolts, standoffs,
-// mount plate) which is MISSING the finished AR0234 camera ('Plane.001', with
-// the 'Glass dark' lens) and the 8x8 ToF board ('8x8-Tof module') that the
-// ORIGINAL export had. Those two nodes are grafted in from GRAFT_SRC at their
-// original world position (both exports share one coordinate space — verified
-// at build time, the build aborts on mismatch).
+// v5 LIGHT build (HYBRID pipeline, halved payload). Source CAD export is the
+// NEW mechanical-detail export (134 MB — adds Node9 exposed PCB, Node1 camera
+// assembly, 16 bolts, standoffs, mount plate) which is MISSING the finished
+// AR0234 camera ('Plane.001', with the 'Glass dark' lens) and the 8x8 ToF
+// board ('8x8-Tof module') that the ORIGINAL export had. Those two nodes are
+// grafted in from GRAFT_SRC at their original world position (both exports
+// share one coordinate space — verified at build time, aborts on mismatch).
+//
+// v5 deltas vs v3:
+//   - 'Node1' (was renamed 'frame-detail', a rough duplicate camera assembly
+//     the runtime HIDES) is dropped outright before budgeting — dead weight.
+//   - Every budget re-derived from seen-size-on-screen: the jetson is mostly
+//     enclosed, the lidar's crown is what reads; the chassis family gets
+//     desktop budgets for the first time.
+//   - The 'mic' retailer-photo texture is stripped from BOTH variants — the
+//     runtime nulls it (ModuleModel 'mic' branch sets out.map = null).
 //
 // Produces two web variants:
-//   public/models/module-v3.glb        — desktop (≤420 k instanced tris, ≤8 MB)
-//   public/models/module-mobile-v3.glb — phones  (≤160 k instanced tris, ≤3 MB)
+//   public/models/module-v5.glb        — desktop (≤225 k instanced tris, ≤1.9 MB)
+//   public/models/module-mobile-v5.glb — phones  (≤95 k instanced tris, ≤0.85 MB)
 // The runtime picks the mobile file on coarse-pointer / low-tier devices.
 // NOTE: /models/* ships with a 1-year immutable cache header, so output names
-// are versioned (…-v3). Never overwrite a previously shipped filename — bump
-// the suffix instead and leave the old files in place.
+// are versioned (…-v5). Never overwrite a previously shipped filename — bump
+// the suffix instead and leave the old files in place (module-v3/-mobile-v3
+// stay on disk untouched).
 const SRC = '/Users/reza/Workspace/embion/path_planner_module/path_planner_module.glb';
 
 // Graft source for the finished camera + ToF board. The original 152 MB export
@@ -60,22 +70,30 @@ const COORD_TOLERANCE = 0.01; // fraction of SRC bounding-box diagonal
 // that count; same for the 4 'standoff' instances and the 3 'mic' instances.
 const VARIANTS = [
   {
-    out: process.argv[2] ?? './public/models/module-v3.glb',
+    out: process.argv[2] ?? './public/models/module-v5.glb',
     anchorsOut: process.argv[3] ?? './src/data/anchors.json',
     tex: 1024,
     budgets: {
-      'jetson': { tris: 100_000, errorStart: 1e-3, errorCap: 0.01 },
-      'lidar-ld19': { tris: 90_000, errorStart: 5e-4, errorCap: 0.003 },
-      'imu': { tris: 30_000, errorStart: 5e-4, errorCap: 0.005 },
-      'pcb-core': { tris: 30_000, errorStart: 5e-4, errorCap: 0.005 },
-      'frame-detail': { tris: 30_000, errorStart: 5e-4, errorCap: 0.005 },
-      'mount-detail': { tris: 8_000, errorStart: 5e-4, errorCap: 0.005 },
-      'bolt': { tris: 800, errorStart: 1e-3, errorCap: 0.02 },
+      // Seen-size budgets: the jetson sits mostly enclosed behind the shells,
+      // the lidar's crown is the part that reads at hero/chapter framing.
+      'jetson': { tris: 45_000, errorStart: 1e-3, errorCap: 0.012 },
+      'lidar-ld19': { tris: 45_000, errorStart: 5e-4, errorCap: 0.006 },
+      'imu': { tris: 15_000, errorStart: 5e-4, errorCap: 0.008 },
+      'pcb-core': { tris: 18_000, errorStart: 5e-4, errorCap: 0.008 },
+      'mount-detail': { tris: 5_000, errorStart: 5e-4, errorCap: 0.008 },
+      // errorCap escalated 0.02 → 0.04 (2×): at 0.02 the bolt stalled at 630.
+      'bolt': { tris: 500, errorStart: 1e-3, errorCap: 0.04 },
+      // Chassis family now budgeted on desktop too (was full source in v3).
+      // chassis-upper stays full (8,894) — it frames every chapter shot.
+      'shell-rear': { tris: 14_000, errorStart: 5e-4, errorCap: 0.006 },
+      'mount-top': { tris: 12_000, errorStart: 5e-4, errorCap: 0.006 },
+      'housing-rear': { tris: 8_000, errorStart: 5e-4, errorCap: 0.006 },
     },
-    limits: { minTris: 300_000, maxTris: 420_000, maxBytes: 8_000_000 },
+    // Budgeted 170 k + full-source remainder ≈ 19 k → ≈ 189 k expected.
+    limits: { minTris: 170_000, maxTris: 225_000, maxBytes: 1_900_000 },
   },
   {
-    out: './public/models/module-mobile-v3.glb',
+    out: './public/models/module-mobile-v5.glb',
     anchorsOut: null, // desktop anchors are authoritative; sizes match
     tex: 512,
     budgets: {
@@ -84,19 +102,30 @@ const VARIANTS = [
       // errorCap, so error was not the binding constraint). Opt them into the
       // sloppy pass, the same remedy the v1 pipeline used for the mobile
       // jetson: simplifySloppy ignores topology, acceptable at phone size.
-      'jetson': { tris: 30_000, errorStart: 1e-3, errorCap: 0.02, sloppy: true },
-      'lidar-ld19': { tris: 28_000, errorStart: 5e-4, errorCap: 0.004 },
-      'imu': { tris: 12_000, errorStart: 5e-4, errorCap: 0.006 },
-      'pcb-core': { tris: 10_000, errorStart: 5e-4, errorCap: 0.006 },
-      'frame-detail': { tris: 10_000, errorStart: 5e-4, errorCap: 0.006 },
-      'mount-detail': { tris: 4_000, errorStart: 5e-4, errorCap: 0.006 },
-      'bolt': { tris: 300, errorStart: 1e-3, errorCap: 0.04, sloppy: true },
-      // v2 mobile chassis-family budgets, carried over.
-      'shell-rear': { tris: 14_000, errorStart: 5e-4, errorCap: 0.005 },
-      'mount-top': { tris: 12_000, errorStart: 5e-4, errorCap: 0.005 },
-      'housing-rear': { tris: 8_000, errorStart: 5e-4, errorCap: 0.005 },
+      // NOTE: 16 k (not the drafted 18 k) — the full-source remainder
+      // (chassis-lower + 3 mics + camera + tof + 4 standoffs ≈ 10 k) pushes
+      // an 18 k jetson past the 95 k file cap; the enclosed jetson is the
+      // cheapest place to claw those tris back.
+      'jetson': { tris: 16_000, errorStart: 1e-3, errorCap: 0.02, sloppy: true },
+      'lidar-ld19': { tris: 18_000, errorStart: 5e-4, errorCap: 0.004 },
+      'imu': { tris: 8_000, errorStart: 5e-4, errorCap: 0.006 },
+      // errorCap escalated 0.006 → 0.012 (2×): at 0.006 pcb-core stalled at
+      // 9,191 (component-dense board, many per-component floors).
+      'pcb-core': { tris: 8_000, errorStart: 5e-4, errorCap: 0.012 },
+      'mount-detail': { tris: 3_000, errorStart: 5e-4, errorCap: 0.006 },
+      // sloppyError 0.15: at the default 0.05 the sloppy pass was error-bound
+      // and landed at 808 tris/bolt (12.9 k instanced — single biggest bust of
+      // the 95 k cap). Probed on the built mesh: 0.05→776, 0.1→468, 0.15→255
+      // (its floor; 0.2–0.5 identical). Bolts are ~3% of model height on a
+      // phone — topology-free 255-tri bolts are invisible at that size.
+      'bolt': { tris: 300, errorStart: 1e-3, errorCap: 0.04, sloppy: true, sloppyError: 0.15 },
+      'shell-rear': { tris: 8_000, errorStart: 5e-4, errorCap: 0.005 },
+      'mount-top': { tris: 7_000, errorStart: 5e-4, errorCap: 0.005 },
+      'housing-rear': { tris: 5_000, errorStart: 5e-4, errorCap: 0.005 },
+      'chassis-upper': { tris: 6_000, errorStart: 5e-4, errorCap: 0.006 },
     },
-    limits: { minTris: 120_000, maxTris: 160_000, maxBytes: 3_000_000 },
+    // Budgeted ≈ 83.8 k + full-source remainder ≈ 10 k → ≈ 94 k expected.
+    limits: { minTris: 85_000, maxTris: 95_000, maxBytes: 850_000 },
   },
 ];
 
@@ -115,7 +144,9 @@ const nodeRenames = {
   'mic.002': 'mic-c',
   // New-export mechanical detail nodes.
   'Node9': 'pcb-core', // exposed PCB (many hex-named colored materials)
-  'Node1': 'frame-detail', // rough camera assembly occupying the camera bay
+  // 'Node1' (v3's 'frame-detail', the rough camera assembly in the camera
+  // bay) is DROPPED before budgeting — see DROP_NODES. The runtime hides it
+  // (duplicate of the grafted finished camera), so it never ships in v5.
   'Cube.050': 'mount-detail',
   'Cylinder.002': 'standoff-a',
   'Cylinder.004': 'standoff-b',
@@ -185,14 +216,34 @@ function ownMeshBounds(node) {
   return min[0] === Infinity ? null : { min, max };
 }
 
+// Nodes shipped in v3 that the runtime unconditionally hides — pure dead
+// bytes. Disposed (with descendants) right after the source is read, so they
+// never enter budgeting, normalization, anchors, or the outputs. Hard-fails
+// if a future export loses the node, so the drop gets reconsidered instead
+// of silently no-opping.
+const DROP_NODES = ['Node1']; // v3's 'frame-detail': duplicate rough camera
+function dropDeadNodes(root) {
+  for (const name of DROP_NODES) {
+    const node = root.listNodes().find((n) => n.getName() === name);
+    if (!node) throw new Error(`DROP_NODES: "${name}" not found in source`);
+    const junk = [];
+    node.traverse((n) => junk.push(n));
+    for (const n of junk) n.dispose();
+  }
+}
+
 // Both pages hardcode the dark theme and null these textures out at runtime,
-// so they are dead weight in the file. The 'mic' and 'tof-board' textures ARE
-// sampled (the runtime grades over them) and must survive, as are the two
-// new-export board photos (IMU / mount-detail).
+// so they are dead weight in the file. The 'tof-board' texture IS sampled
+// (the runtime grades over it) and must survive, as are the two new-export
+// board photos (IMU / mount-detail, 'Screenshot …'). The 'mic' texture is
+// dead as of the dark-theme pass: ModuleModel's 'mic' branch sets
+// out.map = null (retailer product photo — killed in favor of PCB-green).
 function stripDeadTextures(root) {
   for (const mat of root.listMaterials()) {
     const name = mat.getName();
-    if (name === 'Black leather') {
+    if (name === 'mic') {
+      mat.setBaseColorTexture(null);
+    } else if (name === 'Black leather') {
       mat.setBaseColorTexture(null);
       mat.setNormalTexture(null);
       mat.setMetallicRoughnessTexture(null);
@@ -509,7 +560,7 @@ export function creaseNormalsPrimitive(doc, prim, creaseDeg = 40) {
 
 // Last-resort guard for component-dense CAD (the Jetson dev-kit is ~1,872
 // disconnected solids with a topology-preserving floor around 25 k tris).
-// At the v3 budgets this should NEVER trigger — if it does, something is
+// At the v5 budgets this should NEVER trigger — if it does, something is
 // wrong upstream and the build shouts about it. Rebuilds the primitive's
 // attributes to drop the vertices sloppy no longer references.
 function sloppyPrimitive(doc, prim, targetTris, targetError = 0.05) {
@@ -567,6 +618,12 @@ async function build({ out, anchorsOut, tex, budgets, limits }) {
   const doc = await io.read(SRC);
   const root = doc.getRoot();
   const scene = root.getDefaultScene() ?? root.listScenes()[0];
+
+  // ---- 0. Drop runtime-hidden geometry (Node1 / v3's 'frame-detail') ----
+  // Before ANYTHING else: it must not influence the graft coord check, the
+  // normalize transform, budgeting, or anchors. (Node1 is interior to the
+  // assembly, so scene bounds — and hence the normalize — do not move.)
+  dropDeadNodes(root);
 
   // ---- 0a. Graft the finished camera + ToF board (aborts on coord mismatch) ----
   const { graftRaw } = await graftFinishedSensors(io, doc);
@@ -662,12 +719,12 @@ async function build({ out, anchorsOut, tex, budgets, limits }) {
         console.warn('!'.repeat(74));
         console.warn(`!!! SLOPPY FALLBACK triggered for "${mesh.getName()}":`);
         console.warn(`!!! ${fmt(tris)} tris > 1.3× budget (${fmt(cfg.tris)}) after ${14} passes.`);
-        console.warn('!!! This was expected NOT to happen at the v3 budgets — inspect visually.');
+        console.warn('!!! This was expected NOT to happen at the v5 budgets — inspect visually.');
         console.warn('!'.repeat(74));
       }
       const total = tris;
       for (const prim of mesh.listPrimitives()) {
-        sloppyPrimitive(doc, prim, cfg.tris * (primTris(prim) / total), 0.05);
+        sloppyPrimitive(doc, prim, cfg.tris * (primTris(prim) / total), cfg.sloppyError ?? 0.05);
       }
       tris = meshTris(mesh);
       action = optIn ? 'sloppy (opt-in)' : 'SLOPPY FALLBACK';
@@ -712,6 +769,26 @@ async function build({ out, anchorsOut, tex, budgets, limits }) {
   console.log(`\n  ${'mesh'.padEnd(nameW)}  ${'before'.padStart(10)}  ${'after'.padStart(10)}  ${'budget'.padStart(8)}  action`);
   for (const r of report) {
     console.log(`  ${r.name.padEnd(nameW)}  ${fmt(r.before).padStart(10)}  ${fmt(r.after).padStart(10)}  ${(typeof r.budget === 'number' ? fmt(r.budget) : r.budget).padStart(8)}  ${r.action}`);
+  }
+
+  // v5 invariants: the dropped node and dead texture must not resurface, and
+  // the grafted finished sensors must have survived the transform chain.
+  for (const node of root.listNodes()) {
+    const n = node.getName();
+    if (n === 'frame-detail' || n === 'Node1') throw new Error(`${out}: dropped node "${n}" resurfaced`);
+  }
+  for (const mesh of root.listMeshes()) {
+    const n = mesh.getName();
+    if (n === 'frame-detail' || n === 'Node1') throw new Error(`${out}: dropped mesh "${n}" resurfaced`);
+  }
+  if (root.listTextures().some((t) => t.getName() === 'mic')) {
+    throw new Error(`${out}: dead 'mic' texture still present`);
+  }
+  for (const wanted of ['camera-ar0234', 'tof-8x8']) {
+    const node = root.listNodes().find((n) => n.getName() === wanted);
+    if (!node?.getMesh()?.listPrimitives().every((p) => p.getMaterial())) {
+      throw new Error(`${out}: graft "${wanted}" missing (or lost its material)`);
+    }
   }
 
   const total = sceneTris(scene);

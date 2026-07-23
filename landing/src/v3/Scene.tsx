@@ -54,14 +54,23 @@ export default function Scene({
     composerPromise.then(() => setComposerReady(true));
   }, []);
 
+  // Reveal when model + shaders are ready; give the post-processing chunk at
+  // most 2.5s more — a slow network must not hold the whole page hostage (the
+  // composer pops in behind the fade if it's late).
+  const [composerWaived, setComposerWaived] = useState(false);
+  useEffect(() => {
+    if (!glbDone || !compiled) return;
+    const t = setTimeout(() => setComposerWaived(true), 2500);
+    return () => clearTimeout(t);
+  }, [glbDone, compiled]);
   useEffect(() => {
     if (loadedFired.current) return;
     if (!glbDone || !compiled) return;
-    if (q.composer && !composerReady) return;
+    if (q.composer && !composerReady && !composerWaived) return;
     loadedFired.current = true;
     onLoaded();
     setPhase('monitor');
-  }, [glbDone, compiled, composerReady, q.composer, onLoaded]);
+  }, [glbDone, compiled, composerReady, composerWaived, q.composer, onLoaded]);
 
   useEffect(() => {
     if (phase !== 'monitor') return;

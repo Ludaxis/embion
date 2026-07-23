@@ -459,10 +459,10 @@ export function App() {
         <picture>
           {/* portrait phones get a portrait-composed poster (cover-cropping the
               16:9 shot pushed the module half off-frame) */}
-          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/home-portrait.v4.webp" />
+          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/home-portrait.v5.webp" />
           <img
             className="poster"
-            src="/posters/home.v4.webp"
+            src="/posters/home.v5.webp"
             alt=""
             fetchPriority="high"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}

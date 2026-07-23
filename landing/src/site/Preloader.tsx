@@ -59,6 +59,13 @@ export function Preloader({ brand }: { brand: string }) {
 
   if (gone) return null;
   const pct = Math.round(value * 100);
+  // Honest phase captions: the top of the bar is shader compilation, not a
+  // stalled download — say so instead of sitting silently at a high number.
+  const caption =
+    phase === 'model' ? 'loading model'
+    : phase === 'compile' ? 'preparing shaders'
+    : phase === 'done' ? 'ready'
+    : 'loading';
   return (
     <div
       className={`preloader ${hydrated ? 'js' : ''} ${done ? 'preloader-out' : ''}`}
@@ -69,6 +76,7 @@ export function Preloader({ brand }: { brand: string }) {
       <div className="preloader-bar">
         <div className="preloader-fill" style={{ transform: `scaleX(${value})` }} />
       </div>
+      <div className="preloader-phase">{caption}</div>
     </div>
   );
 }

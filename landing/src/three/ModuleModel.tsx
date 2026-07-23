@@ -410,13 +410,13 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     // (No anisotropy: the mesh has no UVs, so the tangent frame is degenerate —
     // the long streak Lightformer paints the brushed highlight instead.)
     out = toPhysical(mat, {
-      roughness: 0.52,
+      roughness: 0.45,
       metalness: 1,
-      clearcoat: 0.25,
-      clearcoatRoughness: 0.4,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.35,
     });
-    out.color = new THREE.Color('#16181e');
-    env = 1.5;
+    out.color = new THREE.Color('#241f1b'); // burnished warm gunmetal
+    env = 1.6;
   } else if (name === 'Material.024') {
     // LiDAR cap window — piano-black metal + a FELT IR-emitter glow (breathes
     // at idle, see ModuleModel useFrame; feeds Bloom on composer tiers).
@@ -426,10 +426,10 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
       clearcoat: 1,
       clearcoatRoughness: 0.06,
     });
-    out.color = new THREE.Color('#0a0a0e');
-    out.emissive = new THREE.Color('#2a0800');
-    out.emissiveIntensity = 0.32;
-    env = 1.2;
+    out.color = new THREE.Color('#0d0908');
+    out.emissive = new THREE.Color('#3d1000'); // amber IR window
+    out.emissiveIntensity = 0.38;
+    env = 1.3;
   } else if (name === 'Black scratched plastic') {
     // AR0234 housing — matte dark polymer, lifted a step so the small part
     // reads against the chassis.
@@ -482,20 +482,21 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
   } else if (name === 'Material.025') {
     // IMU board — the ONE hue: green PCB soldermask, bright enough to survive
     // AgX desaturation as an actual green.
-    out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.3 });
-    out.color = new THREE.Color('#163823');
+    out = toPhysical(mat, { roughness: 0.42, metalness: 0.1, clearcoat: 0.35 });
+    out.color = new THREE.Color('#1a4229'); // live green soldermask
   } else if (name === 'mic') {
     // The source texture is a retailer product-listing photo (purple PCB,
     // marketing banner + logo). Kill it: the mic boards join the PCB-green
     // family; the capsule reads via geometry.
     out = toPhysical(mat, {
-      roughness: 0.42,
-      metalness: 0.05,
-      clearcoat: 0.25,
-      clearcoatRoughness: 0.35,
+      roughness: 0.38,
+      metalness: 0.85,
+      clearcoat: 0.2,
+      clearcoatRoughness: 0.3,
     });
     out.map = null;
-    out.color = new THREE.Color('#121e17');
+    out.color = new THREE.Color('#2e2416'); // dark brass — audio hardware cue
+    env = 1.5;
   } else if (name === 'tof-board') {
     // DFRobot marketing shot — keep the PCB component detail but seat it hard:
     // multiply the photo down so gold pads stop glowing and the silkscreen
@@ -548,8 +549,8 @@ function gradeMaterial(mat: THREE.MeshStandardMaterial, theme: 'dark' | 'light')
     env = 2.0;
   } else if (name.startsWith('FF398E00')) {
     // v4 camera PCB — joins the site's one electronics hue (soldermask green).
-    out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.3 });
-    out.color = new THREE.Color('#163823');
+    out = toPhysical(mat, { roughness: 0.42, metalness: 0.1, clearcoat: 0.35 });
+    out.color = new THREE.Color('#1a4229'); // live green soldermask
   } else if (name.startsWith('x1')) {
     // v4 camera body neutral — seat the bright CAD grey into the dark grade.
     out = toPhysical(mat, { roughness: 0.45, metalness: 0.1, clearcoat: 0.2 });

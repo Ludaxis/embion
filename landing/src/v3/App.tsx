@@ -453,7 +453,7 @@ export function App() {
       >
         <img
           className="poster"
-          src="/posters/explorer.v4.webp"
+          src="/posters/explorer.v5.webp"
           alt=""
           fetchPriority="high"
           onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
