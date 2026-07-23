@@ -24,10 +24,22 @@ export function subscribeBoot(fn: () => void): () => void {
 
 const emit = () => listeners.forEach((fn) => fn());
 
-/** Push progress forward (values below the current one are ignored). */
+const PHASE_RANK: Record<BootPhase, number> = {
+  boot: 0,
+  scene: 1,
+  model: 2,
+  compile: 3,
+  done: 4,
+};
+
+/** Push progress forward. BOTH fields are monotonic: values below the current
+ *  one are ignored, and the phase can never move backwards — a late re-report
+ *  from an earlier stage (e.g. the model reporter re-firing after a Scene
+ *  re-render) must not regress 'done', which would cancel the overlay's
+ *  dismiss timer and strand the page behind the loader until the watchdog. */
 export function reportProgress(value: number, phase?: BootPhase) {
   const v = Math.min(1, Math.max(state.value, value));
-  const p = phase ?? state.phase;
+  const p = phase && PHASE_RANK[phase] > PHASE_RANK[state.phase] ? phase : state.phase;
   if (v === state.value && p === state.phase) return;
   state.value = v;
   state.phase = p;
