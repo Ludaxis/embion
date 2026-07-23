@@ -32,9 +32,11 @@ function heroPose(): { cam: [number, number, number]; look: [number, number, num
   const a = typeof window !== 'undefined' ? window.innerWidth / window.innerHeight : 1.7;
   const t = Math.min(1, Math.max(0, (a - 0.8) / 0.7));
   const l = (p: number, q: number) => p + (q - p) * t;
+  // Three-quarter view: shows the machined depth (flank bolts, mic pods,
+  // top deck) instead of a flat frontal cutout.
   return {
-    cam: [l(0, -0.2), 0.1, l(-7.0, -6.0)],
-    look: [l(0, 1.15), l(0.55, 0.02), 0],
+    cam: [l(1.5, 2.4), l(0.6, 0.7), l(-6.6, -4.6)],
+    look: [l(0, 1.0), l(0.4, -0.05), 0],
   };
 }
 
@@ -75,7 +77,7 @@ function staticTarget(b: { cam: [number, number, number]; look: [number, number,
 
 /** Camera beats: hero, manifesto, then one per chapter. Front of device = -z. */
 const BEATS: { cam: [number, number, number]; look: [number, number, number] }[] = [
-  { cam: [-0.2, 0.1, -6.0], look: [1.15, 0.02, 0] },   // hero (wide default — see heroPose)
+  { cam: [2.4, 0.7, -4.6], look: [1.0, -0.05, 0] },    // hero (wide default — see heroPose)
   { cam: [0.6, 0.5, -5.7], look: [0, 0.1, 0] },        // manifesto (recede + dim)
   { cam: [-1.35, 1.15, -1.95], look: [0.03, 0.62, -0.55] },  // lidar
   { cam: [0.95, 1.9, -1.4], look: [0.02, 0.92, -0.58] },     // imu
@@ -457,10 +459,10 @@ export function App() {
         <picture>
           {/* portrait phones get a portrait-composed poster (cover-cropping the
               16:9 shot pushed the module half off-frame) */}
-          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/poster-dark-portrait.webp" />
+          <source media="(max-aspect-ratio: 9/10)" srcSet="/posters/home-portrait.v4.webp" />
           <img
             className="poster"
-            src="/posters/poster-dark.webp"
+            src="/posters/home.v4.webp"
             alt=""
             fetchPriority="high"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
